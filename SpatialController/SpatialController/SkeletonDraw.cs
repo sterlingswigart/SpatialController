@@ -18,7 +18,8 @@ namespace TrackingNI
     {
         private DepthGenerator depthGenerator;
 
-        public void DrawStickFigure(ref WriteableBitmap image, DepthGenerator depthGenerator, DepthMetaData data, UserGenerator userGenerator)
+        public void DrawStickFigure(ref WriteableBitmap image, DepthGenerator depthGenerator, DepthMetaData data,
+                UserGenerator userGenerator, Ray3D[] rays)
         {
             Point3D corner = new Point3D(data.XRes, data.YRes, data.ZRes);
             corner = depthGenerator.ConvertProjectiveToRealWorld(corner);
@@ -26,6 +27,16 @@ namespace TrackingNI
 
             int nXRes = data.XRes;
             int nYRes = data.YRes;
+
+            foreach (Ray3D ray in rays)
+            {
+                if (ray != null)
+                {
+                    SkeletonJointPosition skp1 = ray.SkeletonJointPosition0();
+                    SkeletonJointPosition skp2 = ray.SkeletonJointPosition1();
+                    DrawTheLine(ref image, ref skp1, ref skp2);
+                }
+            }
 
             uint[] users = userGenerator.GetUsers();
             foreach (uint user in users)
@@ -56,7 +67,6 @@ namespace TrackingNI
             DrawStickLine(ref image, id, userGenerator, SkeletonJoint.RightKnee, SkeletonJoint.RightFoot, corner);
             DrawHeadAndHands(ref image, id, userGenerator, depthGenerator);
             
-
             SkeletonJointPosition leftShoulder = new SkeletonJointPosition();
             SkeletonJointPosition rightShoulder = new SkeletonJointPosition();
             SkeletonJointPosition neck = new SkeletonJointPosition();

@@ -38,7 +38,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="OpenNI.net">
-      <HintPath>..\..\..\KinectTesting\KinectTesting\lib\OpenNI.net.dll</HintPath>
+      <HintPath>libs\OpenNI.net.dll</HintPath>
+    </Reference>
+    <Reference Include="OpenZWaveDotNet">
+      <HintPath>libs\OpenZWaveDotNet.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />

@@ -29,13 +29,33 @@ namespace TrackingNI
         private UserGenerator userGenerator;
         private Device[] devices;
 
-        public SpatialController(ControllerStartup startupType, UserGenerator userGenerator)
-        {
-            this.calibrated = false;
-            this.userGenerator = userGenerator;
-            this.devices = new Device[9]; // Null entries until calibrated.
+        private object animationLock;
+        private Ray3D[] raysToBeAnimated; // Note: Only works for one user.
 
-            Console.Write("Starting SpatialController!\n");
+        public Ray3D[] RaysToBeAnimated
+        {
+            get { lock (animationLock) { return raysToBeAnimated; } }
+        }
+
+        public SpatialController(ControllerStartup startupType, UserGenerator userGenerator, params Device[] devices)
+        {
+            this.raysToBeAnimated = new Ray3D[2]; // Left and right, in this case.
+            this.userGenerator = userGenerator;
+            this.animationLock = new object();
+
+            int numRealDevices = 0; // TODO: List devices on the Z-wave network.
+            if (numRealDevices == 0)
+                this.calibrated = true; // We know where they are!
+            else
+                this.calibrated = false;
+
+            this.devices = new Device[numRealDevices + devices.Length];
+            for (int i = 0; i < devices.Length; i++)
+            {
+                this.devices[i] = devices[i];
+            }
+
+            Console.Write("Starting SpatialController!");
 
             switch (startupType)
             {
@@ -55,6 +75,7 @@ namespace TrackingNI
         // data in CALIBRATION_DATA_FILE. Use only right hand for pointing.
         private void calibrate(uint user)
         {
+            // TODO: Only calibrate real devices (since mock ones already have positions).
             int numDevices = 10/* TODO: number of devices */;
             Device[] devices = new Device[numDevices];
 
@@ -130,20 +151,25 @@ namespace TrackingNI
         // targets.
         public void checkGestures()
         {
-            Console.Write("Called checkGestures().\n");
+            Console.Write("Called checkGestures().");
 
             uint[] users = userGenerator.GetUsers();
             foreach (uint user in users)
             {
-                if (!calibrated)
-                {
-                    // Use the first user to calibrate system.
-                    calibrate(user);
-                    break;
-                }
                 if (userGenerator.GetSkeletonCap().IsTracking(user))
                 {
+                    if (!calibrated)
+                    {
+                        // Use the first user to calibrate system.
+                        calibrate(user);
+                        break;
+                    }
                     checkUserGestures(user);
+                }
+                else
+                {
+                    for (int i = 0; i < raysToBeAnimated.Length; i++)
+                        raysToBeAnimated[i] = null;
                 }
             }
         }
@@ -167,6 +193,15 @@ namespace TrackingNI
             Ray3D rightPointer = new Ray3D(headPoint.X, headPoint.Y, headPoint.Z,
                     rightPoint.X, rightPoint.Y, rightPoint.Z);
 
+            lock (animationLock)
+            {
+                raysToBeAnimated[0] = leftPointer;
+                raysToBeAnimated[1] = rightPointer;
+            }
+
+            Console.Write("Left vector: " + leftPointer);
+            Console.Write("Right vector: " + rightPointer);
+
             foreach (Device d in devices)
             {
                 if (leftPointer.closeTo(d.position) || rightPointer.closeTo(d.position))
@@ -177,6 +212,7 @@ namespace TrackingNI
                     // device's action is.
                 }
             }
+            Console.Write("=============================");
         }
     }
 }

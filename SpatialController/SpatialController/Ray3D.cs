@@ -4,9 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Windows.Media.Media3D;
 
+using xn;
+
 namespace TrackingNI
 {
-    class Ray3D
+    public class Ray3D
     {
         private const double MAX_CALIBRATION_DISTANCE = 10.0;
         private const double MAX_COMMAND_DISTANCE = 10.0;
@@ -88,12 +90,14 @@ namespace TrackingNI
         // and the given is in front of the line; this returns false otherwise.
         public bool closeTo(Vector3D otherPoint)
         {
+            Console.Write("Point at (" + otherPoint.X + "," + otherPoint.Y + "," + otherPoint.Z + ")");
+
             // This is based on the algorithm above, simplified due to the second entity
             // just being a point rather than a line.
-            Vector3D p1 = p0;
-            Vector3D p2 = p1;
+            Vector3D p1 = this.p0;
+            Vector3D p2 = this.p1;
             Vector3D p3 = otherPoint;
-
+            
             Vector3D p31 = p3 - p1;
             Vector3D p21 = p2 - p1;
 
@@ -105,7 +109,9 @@ namespace TrackingNI
             Vector3D resultingPoint = new Vector3D((float)(p1.X + mu * p21.X),
                     (float)(p1.Y + mu * p21.Y), (float)(p1.Z + mu * p21.Z));
 
-            return distance3D(p3, resultingPoint) <= MAX_COMMAND_DISTANCE && this.pointsToward(p3);
+            double distance = distance3D(p3, resultingPoint);
+            Console.Write("Distance (ray to point) = " + distance);
+            return distance <= MAX_COMMAND_DISTANCE && this.pointsToward(p3);
         }
 
         // Returns whether the line points toward p--simply, whether p is closer to
@@ -121,6 +127,30 @@ namespace TrackingNI
             double dy = p0.Y - p1.Y;
             double dz = p0.Z - p1.Z;
             return Math.Sqrt(dx * dx + dy * dy + dz * dz);
+        }
+
+        public SkeletonJointPosition SkeletonJointPosition0()
+        {
+            SkeletonJointPosition skp = new SkeletonJointPosition();
+            skp.position.X = (float)p0.X;
+            skp.position.Y = (float)p0.Y;
+            skp.position.Z = (float)p0.Z;
+            return skp;
+        }
+
+        public SkeletonJointPosition SkeletonJointPosition1()
+        {
+            SkeletonJointPosition skp = new SkeletonJointPosition();
+            skp.position.X = (float)p1.X;
+            skp.position.Y = (float)p1.Y;
+            skp.position.Z = (float)p1.Z;
+            return skp;
+        }
+
+        public override String ToString()
+        {
+            return "FROM (" + p0.X + "," + p0.Y + "," + p0.Z + ") "
+                    + "TO (" + p1.X + "," + p1.Y + "," + p1.Z + ")";
         }
     }
 }

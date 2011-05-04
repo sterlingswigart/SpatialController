@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace SpatialController.Properties {
+namespace TrackingNI.Properties {
     using System;
     
     

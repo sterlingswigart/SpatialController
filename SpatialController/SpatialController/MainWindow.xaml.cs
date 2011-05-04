@@ -15,6 +15,7 @@ using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Media3D;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
@@ -96,14 +97,17 @@ namespace TrackingNI
             worker = new BackgroundWorker();
             stop = false;
 
+            Device mock1 = new Device(new Vector3D(5, 5, 5));
+            Device mock2 = new Device(new Vector3D(-5, 5, -5));
+
             spatialWorker = new BackgroundWorker();
             if (File.Exists(SpatialController.CALIBRATION_DATA_FILE))
             {
-                spatialController = new SpatialController(ControllerStartup.FromFile, userGenerator);
+                spatialController = new SpatialController(ControllerStartup.FromFile, userGenerator, mock1, mock2);
             }
             else
             {
-                spatialController = new SpatialController(ControllerStartup.Calibrate, userGenerator);
+                spatialController = new SpatialController(ControllerStartup.Calibrate, userGenerator, mock1, mock2);
             }
 
             CompositionTarget.Rendering += new EventHandler(WorkerExec);
@@ -181,7 +185,7 @@ namespace TrackingNI
         {
             Dispatcher.BeginInvoke((Action)delegate
             {
-                imgDepth.Source = DepthImageSourceCorrected;
+                imgDepth.Source = DepthImageSource;
             });
         }
         
@@ -290,7 +294,7 @@ namespace TrackingNI
                 }
 
                 //DepthCorrection.Fix(ref depthBitmap, depthData.XRes, depthData.YRes);
-                skeletonDraw.DrawStickFigure(ref depthBitmap, depthGenerator, depthData, userGenerator);
+                skeletonDraw.DrawStickFigure(ref depthBitmap, depthGenerator, depthData, userGenerator, spatialController.RaysToBeAnimated);
 
                 return depthBitmap;
             }
@@ -328,7 +332,7 @@ namespace TrackingNI
                 }
 
                 DepthCorrection.Fix(ref depthBitmapCorrected, depthData.XRes, depthData.YRes);
-                skeletonDraw.DrawStickFigure(ref depthBitmapCorrected, depthGenerator, depthData, userGenerator);
+                skeletonDraw.DrawStickFigure(ref depthBitmapCorrected, depthGenerator, depthData, userGenerator, spatialController.RaysToBeAnimated);
 
                 return depthBitmapCorrected;
             }
