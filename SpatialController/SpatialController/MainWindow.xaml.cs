@@ -19,6 +19,7 @@ using System.Windows.Media.Media3D;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 using xn;
 using System.ComponentModel;
 
@@ -34,29 +35,19 @@ namespace TrackingNI
 
         private Context context;
         private ImageGenerator imageGenerator;
-        private DepthGenerator depthGenerator;
         private UserGenerator userGenerator;
+        private AudioGenerator audioGenerator;
 
         private WriteableBitmap imageBitmap;
-        private WriteableBitmap depthBitmap;
-        private WriteableBitmap depthBitmapCorrected;
         private ImageMetaData imageData;
-        private DepthMetaData depthData;
 
         private PoseDetectionCapability poseDetectionCapability;
         private SkeletonCapability skeletonCapability;
 
+        private SpatialController spatialController;
         private SkeletonDraw skeletonDraw;
 
-        // TODO: Make this event-driven so it doesn't block the graphics thread.
-        private SpatialController spatialController;
-        private BackgroundWorker spatialWorker;
-
         private int[] Histogram { get; set; }
-
-        private Thread reader;
-        private BackgroundWorker worker;
-        private bool stop;
 
         public MainWindow()
         {
@@ -67,51 +58,31 @@ namespace TrackingNI
             console.Top = 0;
             console.Left = 0;
 
-            Console.Write("TrackingNI by Richard Pianka and Ramsey Abouzahra");
-
             context = new Context(CONFIG_FILE);
             imageGenerator = new ImageGenerator(context);
-            depthGenerator = new DepthGenerator(context);
             userGenerator = new UserGenerator(context);
+            audioGenerator = new AudioGenerator(context); // TODO: Put this in config file.
 
             poseDetectionCapability = userGenerator.GetPoseDetectionCap();
             skeletonCapability = userGenerator.GetSkeletonCap();
 
-            MapOutputMode mapMode = depthGenerator.GetMapOutputMode();
-
-            int width = (int)mapMode.nXRes;
-            int height = (int)mapMode.nYRes;
-
-            imageBitmap = new WriteableBitmap(width, height, DPI_X, DPI_Y, PixelFormats.Rgb24, null);
-            depthBitmap = new WriteableBitmap(width, height, DPI_X, DPI_Y, PixelFormats.Rgb24, null);
-            depthBitmapCorrected = new WriteableBitmap(width, height, DPI_X, DPI_Y, PixelFormats.Rgb24, null);
+            imageBitmap = new WriteableBitmap(640, 480, DPI_X, DPI_Y, PixelFormats.Rgb24, null);
             imageData = new ImageMetaData();
-            depthData = new DepthMetaData();
 
             skeletonDraw = new SkeletonDraw();
 
-            Histogram = new int[depthGenerator.GetDeviceMaxDepth()];
+            Device.SetUp();
 
-            reader = new Thread(new ThreadStart(Reader));
-            reader.IsBackground = true;
-            worker = new BackgroundWorker();
-            stop = false;
+            Device mock1 = new Device(new Vector3D(0, 0, 0));
 
-            Device mock1 = new Device(new Vector3D(5, 5, 5));
-            Device mock2 = new Device(new Vector3D(-5, 5, -5));
-
-            spatialWorker = new BackgroundWorker();
             if (File.Exists(SpatialController.CALIBRATION_DATA_FILE))
             {
-                spatialController = new SpatialController(ControllerStartup.FromFile, userGenerator, mock1, mock2);
+                spatialController = new SpatialController(ControllerStartup.FromFile, userGenerator, mock1);
             }
             else
             {
-                spatialController = new SpatialController(ControllerStartup.Calibrate, userGenerator, mock1, mock2);
+                spatialController = new SpatialController(ControllerStartup.Calibrate, userGenerator, mock1);
             }
-
-            CompositionTarget.Rendering += new EventHandler(WorkerExec);
-            Closing += new System.ComponentModel.CancelEventHandler(MainWindow_Closing);
 
             userGenerator.NewUser += new xn.UserGenerator.NewUserHandler(NewUser);
             userGenerator.LostUser += new xn.UserGenerator.LostUserHandler(LostUser);
@@ -121,9 +92,13 @@ namespace TrackingNI
             skeletonCapability.SetSkeletonProfile(SkeletonProfile.All);
             poseDetectionCapability.PoseDetected += new PoseDetectionCapability.PoseDetectedHandler(PoseDetected);
             poseDetectionCapability.PoseEnded += new PoseDetectionCapability.PoseEndedHandler(PoseEnded);
-            reader.Start();
-            worker.DoWork += new DoWorkEventHandler(WorkerTick);
-            spatialWorker.DoWork += new DoWorkEventHandler(SpatialWorkerTick);
+
+            DispatcherTimer dispatcherTimer = new DispatcherTimer();
+            dispatcherTimer.Tick += new EventHandler(TimerTick);
+            dispatcherTimer.Interval = new TimeSpan(0, 0, 0, 0, 100);
+            dispatcherTimer.Start();
+            Console.Write("Finished loading window");
+
         }
 
         private void NewUser(ProductionNode node, uint id)
@@ -167,48 +142,18 @@ namespace TrackingNI
             Console.Write(id + " Lost Pose " + pose);
         }
 
-        private void Reader()
+        private void TimerTick(object sender, EventArgs e)
         {
-            while (!stop)
+            try
             {
-                try
-                {
-                    context.WaitAndUpdateAll();
-                    imageGenerator.GetMetaData(imageData);
-                    depthGenerator.GetMetaData(depthData);
-                }
-                catch (Exception) { }
+                context.WaitAndUpdateAll();
+                imageGenerator.GetMetaData(imageData);
+                //depthGenerator.GetMetaData(depthData);
             }
-        }
-
-        private void WorkerTick(object sender, DoWorkEventArgs e)
-        {
-            Dispatcher.BeginInvoke((Action)delegate
-            {
-                imgDepth.Source = DepthImageSource;
-            });
-        }
-        
-        private void SpatialWorkerTick(object sender, DoWorkEventArgs e)
-        {
-            Dispatcher.BeginInvoke((Action)delegate
-            {
-                spatialController.checkGestures();
-            });
-        }
-
-        private void WorkerExec(object sender, EventArgs e)
-        {
-            if (!worker.IsBusy)
-                worker.RunWorkerAsync();
-
-            if (!spatialWorker.IsBusy)
-                spatialWorker.RunWorkerAsync(); // TODO: Performance of this may be terrible...we'll see.
-        }
-
-        private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
-        {
-            stop = true;
+            catch (Exception) { }
+            imgDepth.Source = RawImageSource;
+            //imgDepth.Source = DepthImageSource;
+            spatialController.checkGestures();
         }
 
         // thanks to Vangos Pterneas for these functions
@@ -261,7 +206,7 @@ namespace TrackingNI
                 return imageBitmap;
             }
         }
-
+        /*
         public ImageSource DepthImageSource
         {
             get
@@ -337,5 +282,6 @@ namespace TrackingNI
                 return depthBitmapCorrected;
             }
         }
+         * */
     }
 }

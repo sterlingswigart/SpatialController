@@ -10,8 +10,8 @@ namespace TrackingNI
 {
     public class Ray3D
     {
-        private const double MAX_CALIBRATION_DISTANCE = 10.0;
-        private const double MAX_COMMAND_DISTANCE = 10.0;
+        private const double MAX_CALIBRATION_DISTANCE = 300.0;
+        private const double MAX_COMMAND_DISTANCE = 400.0;
 
         private Vector3D p0;
         private Vector3D p1;
@@ -90,8 +90,6 @@ namespace TrackingNI
         // and the given is in front of the line; this returns false otherwise.
         public bool closeTo(Vector3D otherPoint)
         {
-            Console.Write("Point at (" + otherPoint.X + "," + otherPoint.Y + "," + otherPoint.Z + ")");
-
             // This is based on the algorithm above, simplified due to the second entity
             // just being a point rather than a line.
             Vector3D p1 = this.p0;
