@@ -29,6 +29,7 @@ namespace TrackingNI
         private UserGenerator userGenerator;
         private Device[] devices;
 
+        //public object kinectDataLock;
         private object animationLock;
         private Ray3D[] raysToBeAnimated; // Note: Only works for one user.
 
@@ -41,6 +42,7 @@ namespace TrackingNI
         {
             this.raysToBeAnimated = new Ray3D[2]; // Left and right, in this case.
             this.userGenerator = userGenerator;
+            //this.kinectDataLock = new object();
             this.animationLock = new object();
 
             int numRealDevices = 0; // TODO: List devices on the Z-wave network.

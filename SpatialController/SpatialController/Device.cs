@@ -109,6 +109,8 @@ namespace TrackingNI
     // Actual device class used by SpatialController
     public class Device
     {
+        public const bool USE_ZWAVE = false;
+
         // ==================================================
         // Z-wave interface code
         // ==================================================
@@ -126,53 +128,56 @@ namespace TrackingNI
 
         public static void SetUp()
         {
-            // Create the Options
-            m_options = new ZWOptions();
-            m_options.Create(zWaveConfigPath, @"", @"");
-
-            // Lock the options
-            m_options.Lock();
-
-            // Create the OpenZWave Manager
-            m_manager = new ZWManager();
-            m_manager.Create();
-
-            // Add an event handler for all the Z-Wave notifications
-            m_manager.OnNotification += new ManagedNotificationsHandler(NotificationHandler);
-
-            // Add a driver, this will start up the z-wave network
-            m_manager.AddDriver(zWaveSerialPortName);
-
-            // ZWave network is started, and our control of hardware can begin once all the nodes have reported in
-            do
+            if (USE_ZWAVE)
             {
-                //Log("Waiting", "The nodes all need to report in");
-                SleepForThreeSeconds(); // Wait since this process can take around 20seconds within my network
-            }
-            while (m_nodesReady == false);
+                // Create the Options
+                m_options = new ZWOptions();
+                m_options.Create(zWaveConfigPath, @"", @"");
 
+                // Lock the options
+                m_options.Lock();
 
-            //Log("All nodes have reported in");
-            foreach (Node node in m_nodeList)
-            {
-                SleepForThreeSeconds(); // Not really needed, but allows you to see what is going on           
-                switch (m_manager.GetNodeType(m_homeId, node.ID).ToString())
+                // Create the OpenZWave Manager
+                m_manager = new ZWManager();
+                m_manager.Create();
+
+                // Add an event handler for all the Z-Wave notifications
+                m_manager.OnNotification += new ManagedNotificationsHandler(NotificationHandler);
+
+                // Add a driver, this will start up the z-wave network
+                m_manager.AddDriver(zWaveSerialPortName);
+
+                // ZWave network is started, and our control of hardware can begin once all the nodes have reported in
+                do
                 {
-                    case "Binary Power Switch":
-                    case "Multilevel Power Switch":
-                    case "Multilevel Switch":
-                        //Log("Turning On " + m_manager.GetNodeType(m_homeId, node.ID).ToString() + " with ID " + node.ID.ToString());
-                        //m_manager.SetNodeOn(m_homeId, node.ID);
-                        break;
-                    default:
-                        //Log("Can't do anything with " + m_manager.GetNodeType(m_homeId, node.ID).ToString());
-                        break;
+                    //Log("Waiting", "The nodes all need to report in");
+                    SleepForThreeSeconds(); // Wait since this process can take around 20seconds within my network
                 }
+                while (m_nodesReady == false);
+
+
+                //Log("All nodes have reported in");
+                foreach (Node node in m_nodeList)
+                {
+                    SleepForThreeSeconds(); // Not really needed, but allows you to see what is going on           
+                    switch (m_manager.GetNodeType(m_homeId, node.ID).ToString())
+                    {
+                        case "Binary Power Switch":
+                        case "Multilevel Power Switch":
+                        case "Multilevel Switch":
+                            //Log("Turning On " + m_manager.GetNodeType(m_homeId, node.ID).ToString() + " with ID " + node.ID.ToString());
+                            //m_manager.SetNodeOn(m_homeId, node.ID);
+                            break;
+                        default:
+                            //Log("Can't do anything with " + m_manager.GetNodeType(m_homeId, node.ID).ToString());
+                            break;
+                    }
+                }
+                SleepForThreeSeconds();
+                //Log("All switches should now be on");
+                //Log("Press a key to exit");
+                //String commandRead = Console.ReadLine().ToString();
             }
-            SleepForThreeSeconds();
-            //Log("All switches should now be on");
-            //Log("Press a key to exit");
-            //String commandRead = Console.ReadLine().ToString();
         }
 
         /// <summary>
@@ -416,11 +421,17 @@ namespace TrackingNI
                 if (DateTime.Now - focusStartTime > new TimeSpan(0, 0, 0, 0, ACTIVATION_MS)
                     && DateTime.Now - lastActionTime > new TimeSpan(0, 0, 0, 0, DEBOUNCE_MS))
                 {
-                    Console.Write("Switching light on or off!");
-                    if (!on)
-                        m_manager.SwitchAllOn(m_homeId);
+                    if (on)
+                        Console.Write("Switching light off!");
                     else
-                        m_manager.SwitchAllOff(m_homeId);
+                        Console.Write("Switching light on!");
+                    if (USE_ZWAVE)
+                    {
+                        if (!on)
+                            m_manager.SwitchAllOn(m_homeId);
+                        else
+                            m_manager.SwitchAllOff(m_homeId);
+                    }
                     on = !on;
                     lastActionTime = DateTime.Now;
                 }

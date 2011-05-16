@@ -34,11 +34,13 @@ namespace TrackingNI
         private Console console;
 
         private Context context;
+        private DepthGenerator depthGenerator;
         private ImageGenerator imageGenerator;
         private UserGenerator userGenerator;
-        private AudioGenerator audioGenerator;
 
+        private WriteableBitmap depthBitmap;
         private WriteableBitmap imageBitmap;
+        private DepthMetaData depthData;
         private ImageMetaData imageData;
 
         private PoseDetectionCapability poseDetectionCapability;
@@ -59,14 +61,16 @@ namespace TrackingNI
             console.Left = 0;
 
             context = new Context(CONFIG_FILE);
+            depthGenerator = new DepthGenerator(context);
             imageGenerator = new ImageGenerator(context);
             userGenerator = new UserGenerator(context);
-            audioGenerator = new AudioGenerator(context); // TODO: Put this in config file.
 
             poseDetectionCapability = userGenerator.GetPoseDetectionCap();
             skeletonCapability = userGenerator.GetSkeletonCap();
 
+            depthBitmap = new WriteableBitmap(640, 480, DPI_X, DPI_Y, PixelFormats.Rgb24, null);
             imageBitmap = new WriteableBitmap(640, 480, DPI_X, DPI_Y, PixelFormats.Rgb24, null);
+            depthData = new DepthMetaData();
             imageData = new ImageMetaData();
 
             skeletonDraw = new SkeletonDraw();
@@ -93,12 +97,22 @@ namespace TrackingNI
             poseDetectionCapability.PoseDetected += new PoseDetectionCapability.PoseDetectedHandler(PoseDetected);
             poseDetectionCapability.PoseEnded += new PoseDetectionCapability.PoseEndedHandler(PoseEnded);
 
-            DispatcherTimer dispatcherTimer = new DispatcherTimer();
-            dispatcherTimer.Tick += new EventHandler(TimerTick);
-            dispatcherTimer.Interval = new TimeSpan(0, 0, 0, 0, 100);
-            dispatcherTimer.Start();
-            Console.Write("Finished loading window");
+            DispatcherTimer kinectDataTimer = new DispatcherTimer();
+            kinectDataTimer.Tick += new EventHandler(KinectDataTick);
+            kinectDataTimer.Interval = new TimeSpan(0, 0, 0, 0, 100);
+            kinectDataTimer.Start();
 
+            DispatcherTimer imageTimer = new DispatcherTimer();
+            imageTimer.Tick += new EventHandler(ImageTick);
+            imageTimer.Interval = new TimeSpan(0, 0, 0, 0, 60);
+            imageTimer.Start();
+
+            DispatcherTimer checkGesturesTimer = new DispatcherTimer();
+            checkGesturesTimer.Tick += new EventHandler(CheckGesturesTick);
+            checkGesturesTimer.Interval = new TimeSpan(0, 0, 0, 0, 200);
+            checkGesturesTimer.Start();
+
+            Console.Write("Finished loading window");
         }
 
         private void NewUser(ProductionNode node, uint id)
@@ -142,17 +156,28 @@ namespace TrackingNI
             Console.Write(id + " Lost Pose " + pose);
         }
 
-        private void TimerTick(object sender, EventArgs e)
+        private void KinectDataTick(object sender, EventArgs e)
         {
             try
             {
+                //lock (spatialController.kinectDataLock)
                 context.WaitAndUpdateAll();
-                imageGenerator.GetMetaData(imageData);
-                //depthGenerator.GetMetaData(depthData);
             }
             catch (Exception) { }
+        }
+
+        private void ImageTick(object sender, EventArgs e)
+        {
+            //lock (spatialController.kinectDataLock)
+            depthGenerator.GetMetaData(depthData);
+            imageGenerator.GetMetaData(imageData);
             imgDepth.Source = RawImageSource;
             //imgDepth.Source = DepthImageSource;
+        }
+
+        private void CheckGesturesTick(object sender, EventArgs e)
+        {
+            //lock (spatialController.kinectDataLock)
             spatialController.checkGestures();
         }
 
@@ -203,10 +228,11 @@ namespace TrackingNI
                     imageBitmap.Unlock();
                 }
 
+                skeletonDraw.DrawStickFigure(ref imageBitmap, depthGenerator, depthData, userGenerator, spatialController.RaysToBeAnimated);
                 return imageBitmap;
             }
         }
-        /*
+        
         public ImageSource DepthImageSource
         {
             get
@@ -244,7 +270,7 @@ namespace TrackingNI
                 return depthBitmap;
             }
         }
-
+        /*
         public ImageSource DepthImageSourceCorrected
         {
             get

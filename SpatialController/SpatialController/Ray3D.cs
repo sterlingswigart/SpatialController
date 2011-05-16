@@ -41,7 +41,7 @@ namespace TrackingNI
         {
             // Algorithm is ported from the C algorithm of 
             // Paul Bourke at http://local.wasp.uwa.edu.au/~pbourke/geometry/lineline3d/.
-            // Port to C#   done by Ronald Hulthuizen.
+            // Port to C# done by Ronald Hulthuizen.
             Vector3D p1 = p0;
             Vector3D p2 = p1;
             Vector3D p3 = other.p0;
