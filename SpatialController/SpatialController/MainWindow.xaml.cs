@@ -61,8 +61,8 @@ namespace TrackingNI
             console.Left = 0;
 
             context = new Context(CONFIG_FILE);
-            depthGenerator = new DepthGenerator(context);
             imageGenerator = new ImageGenerator(context);
+            depthGenerator = new DepthGenerator(context);
             userGenerator = new UserGenerator(context);
 
             poseDetectionCapability = userGenerator.GetPoseDetectionCap();
@@ -160,28 +160,24 @@ namespace TrackingNI
         {
             try
             {
-                //lock (spatialController.kinectDataLock)
                 context.WaitAndUpdateAll();
+                imageGenerator.GetMetaData(imageData);
             }
             catch (Exception) { }
         }
 
         private void ImageTick(object sender, EventArgs e)
         {
-            //lock (spatialController.kinectDataLock)
-            depthGenerator.GetMetaData(depthData);
-            imageGenerator.GetMetaData(imageData);
-            imgDepth.Source = RawImageSource;
-            //imgDepth.Source = DepthImageSource;
+            if (imageData != null && imageData.DataSize > 1)
+                imgDepth.Source = RawImageSource;
         }
 
         private void CheckGesturesTick(object sender, EventArgs e)
         {
-            //lock (spatialController.kinectDataLock)
             spatialController.checkGestures();
         }
 
-        // thanks to Vangos Pterneas for these functions
+        // Thanks to Vangos Pterneas for these functions.
         public unsafe void UpdateHistogram(DepthMetaData depthMD)
         {
             for (int i = 0; i < Histogram.Length; ++i)
