@@ -27,6 +27,12 @@ namespace TrackingNI
 {
     public partial class MainWindow : Window
     {
+        private const bool DRAW_SKELETON = false;
+
+        // Only can track one user now for performance reasons.
+        private bool trackingUser;
+        private uint trackingUserId;
+
         private readonly string CONFIG_FILE = @"User.xml";
         private readonly int DPI_X = 96;
         private readonly int DPI_Y = 96;
@@ -55,25 +61,32 @@ namespace TrackingNI
         {
             InitializeComponent();
 
+            trackingUser = false;
+            trackingUserId = 0;
+
             console = new Console();
             console.Show();
             console.Top = 0;
             console.Left = 0;
 
             context = new Context(CONFIG_FILE);
-            imageGenerator = new ImageGenerator(context);
-            depthGenerator = new DepthGenerator(context);
+            //imageGenerator = new ImageGenerator(context);
             userGenerator = new UserGenerator(context);
+
+            if (DRAW_SKELETON)
+            {
+                depthGenerator = new DepthGenerator(context);
+                depthBitmap = new WriteableBitmap(640, 480, DPI_X, DPI_Y, PixelFormats.Rgb24, null);
+                depthData = new DepthMetaData();
+                Histogram = new int[depthGenerator.GetDeviceMaxDepth()];
+                skeletonDraw = new SkeletonDraw();
+            }
 
             poseDetectionCapability = userGenerator.GetPoseDetectionCap();
             skeletonCapability = userGenerator.GetSkeletonCap();
-
-            depthBitmap = new WriteableBitmap(640, 480, DPI_X, DPI_Y, PixelFormats.Rgb24, null);
+            
             imageBitmap = new WriteableBitmap(640, 480, DPI_X, DPI_Y, PixelFormats.Rgb24, null);
-            depthData = new DepthMetaData();
             imageData = new ImageMetaData();
-
-            skeletonDraw = new SkeletonDraw();
 
             Device.SetUp();
 
@@ -90,7 +103,7 @@ namespace TrackingNI
 
             userGenerator.NewUser += new xn.UserGenerator.NewUserHandler(NewUser);
             userGenerator.LostUser += new xn.UserGenerator.LostUserHandler(LostUser);
-
+            
             skeletonCapability.CalibrationStart += new SkeletonCapability.CalibrationStartHandler(CalibrationStart);
             skeletonCapability.CalibrationEnd += new SkeletonCapability.CalibrationEndHandler(CalibrationEnd);
             skeletonCapability.SetSkeletonProfile(SkeletonProfile.All);
@@ -99,12 +112,12 @@ namespace TrackingNI
 
             DispatcherTimer kinectDataTimer = new DispatcherTimer();
             kinectDataTimer.Tick += new EventHandler(KinectDataTick);
-            kinectDataTimer.Interval = new TimeSpan(0, 0, 0, 0, 100);
+            kinectDataTimer.Interval = new TimeSpan(0, 0, 0, 0, 100); // 10 FPS in config file
             kinectDataTimer.Start();
 
             DispatcherTimer imageTimer = new DispatcherTimer();
             imageTimer.Tick += new EventHandler(ImageTick);
-            imageTimer.Interval = new TimeSpan(0, 0, 0, 0, 60);
+            imageTimer.Interval = new TimeSpan(0, 0, 0, 0, 100); // 10 FPS in config file
             imageTimer.Start();
 
             DispatcherTimer checkGesturesTimer = new DispatcherTimer();
@@ -123,6 +136,8 @@ namespace TrackingNI
 
         private void LostUser(ProductionNode node, uint id)
         {
+            if (trackingUserId == id)
+                trackingUser = false;
             Console.Write(id + " Lost user");
         }
 
@@ -136,7 +151,11 @@ namespace TrackingNI
             Console.Write(id + " Calibration ended " + (success ? "successfully" : "unsuccessfully"));
             if (success)
             {
+                if (trackingUser)
+                    userGenerator.GetSkeletonCap().StopTracking(trackingUserId);
                 userGenerator.GetSkeletonCap().StartTracking(id);
+                trackingUser = true;
+                trackingUserId = id;
             }
             else
             {
@@ -161,15 +180,17 @@ namespace TrackingNI
             try
             {
                 context.WaitAndUpdateAll();
-                imageGenerator.GetMetaData(imageData);
+                //imageGenerator.GetMetaData(imageData);
+                //depthGenerator.GetMetaData(depthData);
             }
             catch (Exception) { }
         }
 
         private void ImageTick(object sender, EventArgs e)
         {
-            if (imageData != null && imageData.DataSize > 1)
-                imgDepth.Source = RawImageSource;
+            //imgDepth.Source = DepthImageSource;
+            //if (imageData != null && imageData.DataSize > 1)
+                //imgDepth.Source = RawImageSource;
         }
 
         private void CheckGesturesTick(object sender, EventArgs e)
@@ -224,7 +245,8 @@ namespace TrackingNI
                     imageBitmap.Unlock();
                 }
 
-                skeletonDraw.DrawStickFigure(ref imageBitmap, depthGenerator, depthData, userGenerator, spatialController.RaysToBeAnimated);
+                if (DRAW_SKELETON)
+                    skeletonDraw.DrawStickFigure(ref imageBitmap, depthGenerator, depthData, userGenerator, spatialController.RaysToBeAnimated);
                 return imageBitmap;
             }
         }
@@ -260,50 +282,11 @@ namespace TrackingNI
                     depthBitmap.Unlock();
                 }
 
-                //DepthCorrection.Fix(ref depthBitmap, depthData.XRes, depthData.YRes);
+                DepthCorrection.Fix(ref depthBitmap, depthData.XRes, depthData.YRes);
                 skeletonDraw.DrawStickFigure(ref depthBitmap, depthGenerator, depthData, userGenerator, spatialController.RaysToBeAnimated);
 
                 return depthBitmap;
             }
         }
-        /*
-        public ImageSource DepthImageSourceCorrected
-        {
-            get
-            {
-                if (depthBitmapCorrected != null)
-                {
-                    UpdateHistogram(depthData);
-
-                    depthBitmapCorrected.Lock();
-
-                    unsafe
-                    {
-                        ushort* pDepth = (ushort*)depthGenerator.GetDepthMapPtr().ToPointer();
-                        for (int y = 0; y < depthData.YRes; ++y)
-                        {
-                            byte* pDest = (byte*)depthBitmapCorrected.BackBuffer.ToPointer() + y * depthBitmapCorrected.BackBufferStride;
-                            for (int x = 0; x < depthData.XRes; ++x, ++pDepth, pDest += 3)
-                            {
-                                byte pixel = (byte)Histogram[*pDepth];
-
-                                pDest[0] = pixel;
-                                pDest[1] = pixel;
-                                pDest[2] = pixel;
-                            }
-                        }
-                    }
-
-                    depthBitmapCorrected.AddDirtyRect(new Int32Rect(0, 0, depthData.XRes, depthData.YRes));
-                    depthBitmapCorrected.Unlock();
-                }
-
-                DepthCorrection.Fix(ref depthBitmapCorrected, depthData.XRes, depthData.YRes);
-                skeletonDraw.DrawStickFigure(ref depthBitmapCorrected, depthGenerator, depthData, userGenerator, spatialController.RaysToBeAnimated);
-
-                return depthBitmapCorrected;
-            }
-        }
-         * */
     }
 }

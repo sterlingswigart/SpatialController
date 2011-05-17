@@ -109,7 +109,7 @@ namespace TrackingNI
     // Actual device class used by SpatialController
     public class Device
     {
-        public const bool USE_ZWAVE = false;
+        public const bool USE_ZWAVE = true;
 
         // ==================================================
         // Z-wave interface code
