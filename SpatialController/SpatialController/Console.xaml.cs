@@ -12,7 +12,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 
-namespace TrackingNI
+namespace SpatialController
 {
     /// <summary>
     /// Interaction logic for Console.xaml

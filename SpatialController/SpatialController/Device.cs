@@ -6,9 +6,9 @@ using System.Windows.Media.Media3D;
 using OpenZWaveDotNet;
 using System.ComponentModel;
 
-using xn;
+using OpenNI;
 
-namespace TrackingNI
+namespace SpatialController
 {
     // Z-wave node
     public class Node
@@ -178,6 +178,24 @@ namespace TrackingNI
                 //Log("Press a key to exit");
                 //String commandRead = Console.ReadLine().ToString();
             }
+        }
+
+        public static byte[] getNodes()
+        {
+            byte[] nodes = new byte[m_nodeList.Count];
+            for (int i = 0; i < m_nodeList.Count; i++)
+                nodes[i] = m_nodeList[i].ID;
+            return nodes;
+        }
+
+        public static void turnOn(byte deviceId)
+        {
+            m_manager.SetNodeOn(m_homeId, deviceId);
+        }
+
+        public static void turnOff(byte deviceId)
+        {
+            m_manager.SetNodeOff(m_homeId, deviceId);
         }
 
         /// <summary>
@@ -403,13 +421,16 @@ namespace TrackingNI
 
         public Vector3D position;
 
-        public Device(Vector3D position/*, TODO: device handler */)
+        private byte deviceId;
+
+        public Device(Vector3D position/*, TODO: device handler */, byte deviceId)
         {
             this.on = false;
             this.inFocus = false;
             this.lastActionTime = DateTime.Now;
             this.focusStartTime = DateTime.Now;
             this.position = position;
+            this.deviceId = deviceId;
         }
 
         public void isInFocus()
@@ -428,9 +449,9 @@ namespace TrackingNI
                     if (USE_ZWAVE)
                     {
                         if (!on)
-                            m_manager.SwitchAllOn(m_homeId);
+                            m_manager.SetNodeOn(m_homeId, deviceId);
                         else
-                            m_manager.SwitchAllOff(m_homeId);
+                            m_manager.SetNodeOff(m_homeId, deviceId);
                     }
                     on = !on;
                     lastActionTime = DateTime.Now;

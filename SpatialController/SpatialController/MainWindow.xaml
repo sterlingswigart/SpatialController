@@ -1,8 +1,7 @@
-﻿<Window x:Class="TrackingNI.MainWindow"
+﻿<Window x:Class="SpatialController.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="TrackingNI" Height="540" Width="700
-        " ResizeMode="NoResize">
+        Title="TrackingNI" Height="540" Width="700" ResizeMode="NoResize">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="1279*" />

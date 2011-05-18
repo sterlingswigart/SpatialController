@@ -6,9 +6,9 @@ using System.Threading;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 
-using xn;
+using OpenNI;
 
-namespace TrackingNI
+namespace SpatialController
 {
     enum ControllerStartup
     {
@@ -22,6 +22,8 @@ namespace TrackingNI
         private const int CALIBRATION_SEC = 9;
         private const int CALIBRATION_OFFSET_SEC = 4;
         private const int STEADY_SEC = 3;
+        private const int SEC_FOR_RELOCATION = 5;
+        private const int SEC_BETWEEN_CALIBRATIONS = 2;
         private const int SAMPLES_PER_SEC = 4;
         private const double SPHERE_RADIUS = 1.0;
 
@@ -42,8 +44,9 @@ namespace TrackingNI
             this.raysToBeAnimated = new Ray3D[2]; // Left and right, in this case.
             this.userGenerator = userGenerator;
             this.animationLock = new object();
-
-            int numRealDevices = 0; // TODO: List devices on the Z-wave network.
+            
+            byte[] nodes = Device.getNodes();
+            int numRealDevices = nodes.Length;
             if (numRealDevices == 0)
                 this.calibrated = true; // We know where they are!
             else
@@ -73,33 +76,43 @@ namespace TrackingNI
 
         // Calibrate the locations of devices in the room, saving calibration
         // data in CALIBRATION_DATA_FILE. Use only right hand for pointing.
-        private void calibrate(uint user)
+        private void calibrate(int user)
         {
-            // TODO: Only calibrate real devices (since mock ones already have positions).
-            int numDevices = 10/* TODO: number of devices */;
-            Device[] devices = new Device[numDevices];
+            byte[] nodes = Device.getNodes();
+            Ray3D[] firstRays = new Ray3D[devices.Length];
+            UserPrompt.Write("Please stand about 10 feet away from the kinect on the right"
+                    + " side of the field of view, but leave room for pointing off to the right.");
+            UserPrompt.Write("When a light turns on, please point to it until it turns off.");
+            Thread.Sleep((SEC_FOR_RELOCATION - SEC_BETWEEN_CALIBRATIONS) * 1000);
 
-            Ray3D[] firstRays = new Ray3D[numDevices];
-            // TODO: Prompt user to stand on right-back side of Kinect FOV with arms at sides.
-            for (int i = 0; i < numDevices; i++)
-                firstRays[i] = calibrateDeviceOnePosition(user);
+            for (int i = 0; i < devices.Length; i++)
+            {
+                Thread.Sleep(SEC_BETWEEN_CALIBRATIONS * 1000);
+                firstRays[i] = calibrateDeviceOnePosition(user, nodes[i]);
+            }
 
-            // TODO: Prompt user to stand on left-front side of Kinect FOV with arms at sides.
-            for (int i = 0; i < numDevices; i++)
+            UserPrompt.Write("Please stand about 5 feet away from the kinect on the left"
+                    + " side of the field of view, but leave room for pointing off to the left.");
+            UserPrompt.Write("Once again, when a light turns on, please point to it until it turns off.");
+            Thread.Sleep((SEC_FOR_RELOCATION - SEC_BETWEEN_CALIBRATIONS) * 1000);
+
+            for (int i = 0; i < devices.Length; i++)
             {
                 // TODO: If intersection with returns [0,0,0] vector, save this device #
                 // and calibrate again on both sides.
-                devices[i] = new Device(firstRays[i].intersectionWith(calibrateDeviceOnePosition(user)));
+                Thread.Sleep(SEC_BETWEEN_CALIBRATIONS * 1000);
+                devices[i] = new Device(firstRays[i].intersectionWith(calibrateDeviceOnePosition(user, nodes[i])), nodes[i]);
             }
 
             saveCalibrationToFile(devices);
-            calibrated = true;  
-            // TODO: Prompt user that calibration is complete.
+            calibrated = true;
+            UserPrompt.Write("Calibration has been completed. After a few seconds, you should be able"
+                    + " to point to lights to turn them on!");
         }
 
-        private Ray3D calibrateDeviceOnePosition(uint user)
+        private Ray3D calibrateDeviceOnePosition(int user, byte device)
         {
-            // TODO: Turn on device
+            Device.turnOn(device);
             Thread.Sleep(CALIBRATION_OFFSET_SEC * 1000);
             Vector3D[] headPoints = new Vector3D[STEADY_SEC * SAMPLES_PER_SEC];
             Vector3D[] rightHandPoints = new Vector3D[STEADY_SEC * SAMPLES_PER_SEC];
@@ -109,10 +122,10 @@ namespace TrackingNI
             SkeletonJointPosition rightHand = new SkeletonJointPosition();
             for (int i = 0; i < STEADY_SEC * SAMPLES_PER_SEC; i++)
             {
-                userGenerator.GetSkeletonCap().GetSkeletonJointPosition(user, SkeletonJoint.Head, ref head);
-                userGenerator.GetSkeletonCap().GetSkeletonJointPosition(user, SkeletonJoint.RightHand, ref rightHand);
-                headPoints[i] = new Vector3D(head.position.X, head.position.Y, head.position.Z);
-                rightHandPoints[i] = new Vector3D(rightHand.position.X, rightHand.position.Y, rightHand.position.Z);
+                head = userGenerator.SkeletonCapability.GetSkeletonJointPosition(user, SkeletonJoint.Head);
+                rightHand = userGenerator.SkeletonCapability.GetSkeletonJointPosition(user, SkeletonJoint.RightHand);
+                headPoints[i] = new Vector3D(head.Position.X, head.Position.Y, head.Position.Z);
+                rightHandPoints[i] = new Vector3D(rightHand.Position.X, rightHand.Position.Y, rightHand.Position.Z);
             }
             Thread.Sleep((CALIBRATION_SEC - STEADY_SEC - CALIBRATION_OFFSET_SEC) * 1000);
 
@@ -122,7 +135,7 @@ namespace TrackingNI
             Vector3D averageRightHandPoint = new Vector3D(rightHandPoints.Average(x => x.X),
                     rightHandPoints.Average(x => x.Y), rightHandPoints.Average(x => x.Z));
 
-            // TODO: Turn off device.
+            Device.turnOff(device);
             return new Ray3D(averageHeadPoint, averageRightHandPoint);
         }
 
@@ -153,10 +166,10 @@ namespace TrackingNI
         {
             Console.Write("Called checkGestures().");
 
-            uint[] users = userGenerator.GetUsers();
-            foreach (uint user in users)
+            int[] users = userGenerator.GetUsers();
+            foreach (int user in users)
             {
-                if (userGenerator.GetSkeletonCap().IsTracking(user))
+                if (userGenerator.SkeletonCapability.IsTracking(user))
                 {
                     if (!calibrated)
                     {
@@ -174,19 +187,19 @@ namespace TrackingNI
             }
         }
 
-        private void checkUserGestures(uint id)
+        private void checkUserGestures(int id)
         {
             SkeletonJointPosition head = new SkeletonJointPosition();
             SkeletonJointPosition leftHand = new SkeletonJointPosition();
             SkeletonJointPosition rightHand = new SkeletonJointPosition();
 
-            userGenerator.GetSkeletonCap().GetSkeletonJointPosition(id, SkeletonJoint.Head, ref head);
-            userGenerator.GetSkeletonCap().GetSkeletonJointPosition(id, SkeletonJoint.LeftHand, ref leftHand);
-            userGenerator.GetSkeletonCap().GetSkeletonJointPosition(id, SkeletonJoint.RightHand, ref rightHand);
+            head = userGenerator.SkeletonCapability.GetSkeletonJointPosition(id, SkeletonJoint.Head);
+            leftHand = userGenerator.SkeletonCapability.GetSkeletonJointPosition(id, SkeletonJoint.LeftHand);
+            rightHand = userGenerator.SkeletonCapability.GetSkeletonJointPosition(id, SkeletonJoint.RightHand);
 
-            xn.Point3D headPoint = head.position;
-            xn.Point3D leftPoint = leftHand.position;
-            xn.Point3D rightPoint = rightHand.position;
+            OpenNI.Point3D headPoint = head.Position;
+            OpenNI.Point3D leftPoint = leftHand.Position;
+            OpenNI.Point3D rightPoint = rightHand.Position;
 
             Ray3D leftPointer = new Ray3D(headPoint.X, headPoint.Y, headPoint.Z,
                     leftPoint.X, leftPoint.Y, leftPoint.Z);

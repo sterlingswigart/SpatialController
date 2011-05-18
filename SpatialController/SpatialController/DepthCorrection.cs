@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Windows.Media.Imaging;
 
-namespace TrackingNI
+namespace SpatialController
 {
     public class DepthCorrection
     {

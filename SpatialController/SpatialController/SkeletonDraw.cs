@@ -6,13 +6,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using xn;
+using OpenNI;
 using System.Windows.Media.Imaging;
 using System.Windows;
 using System.Drawing.Drawing2D;
 using System.Drawing;
 
-namespace TrackingNI
+namespace SpatialController
 {
     public class SkeletonDraw
     {
@@ -32,23 +32,23 @@ namespace TrackingNI
             {
                 if (ray != null)
                 {
-                    SkeletonJointPosition skp1 = ray.SkeletonJointPosition0();
-                    SkeletonJointPosition skp2 = ray.SkeletonJointPosition1();
-                    DrawTheLine(ref image, ref skp1, ref skp2);
+                    int[] p0 = ray.point0();
+                    int[] p1 = ray.point1();
+                    DrawTheLine(ref image, p0, p1);
                 }
             }
 
-            uint[] users = userGenerator.GetUsers();
-            foreach (uint user in users)
+            int[] users = userGenerator.GetUsers();
+            foreach (int user in users)
             {
-                if (userGenerator.GetSkeletonCap().IsTracking(user))
+                if (userGenerator.SkeletonCapability.IsTracking(user))
                 {
                     DrawSingleUser(ref image, user, userGenerator, corner);
                 }
             }
         }
 
-        public void DrawSingleUser(ref WriteableBitmap image, uint id, UserGenerator userGenerator, Point3D corner)
+        public void DrawSingleUser(ref WriteableBitmap image, int id, UserGenerator userGenerator, Point3D corner)
         {
             DrawStickLine(ref image, id, userGenerator, SkeletonJoint.LeftHand, SkeletonJoint.LeftElbow, corner);
             DrawStickLine(ref image, id, userGenerator, SkeletonJoint.LeftElbow, SkeletonJoint.LeftShoulder, corner);
@@ -72,32 +72,32 @@ namespace TrackingNI
             SkeletonJointPosition neck = new SkeletonJointPosition();
             SkeletonJointPosition midShoulder = new SkeletonJointPosition();
 
-            userGenerator.GetSkeletonCap().GetSkeletonJointPosition(id, SkeletonJoint.LeftShoulder, ref leftShoulder);
-            userGenerator.GetSkeletonCap().GetSkeletonJointPosition(id, SkeletonJoint.RightShoulder, ref rightShoulder);
-            userGenerator.GetSkeletonCap().GetSkeletonJointPosition(id, SkeletonJoint.Neck, ref neck);
+            leftShoulder = userGenerator.SkeletonCapability.GetSkeletonJointPosition(id, SkeletonJoint.LeftShoulder);
+            rightShoulder = userGenerator.SkeletonCapability.GetSkeletonJointPosition(id, SkeletonJoint.RightShoulder);
+            neck = userGenerator.SkeletonCapability.GetSkeletonJointPosition(id, SkeletonJoint.Neck);
 
-            midShoulder.position = new Point3D((leftShoulder.position.X + rightShoulder.position.X) / 2,
-                                               (leftShoulder.position.Y + rightShoulder.position.Y) / 2,
-                                               (leftShoulder.position.Z + rightShoulder.position.Z) / 2);
-            midShoulder.fConfidence = (leftShoulder.fConfidence + rightShoulder.fConfidence) / 2;
+            midShoulder.Position = new Point3D((leftShoulder.Position.X + rightShoulder.Position.X) / 2,
+                                               (leftShoulder.Position.Y + rightShoulder.Position.Y) / 2,
+                                               (leftShoulder.Position.Z + rightShoulder.Position.Z) / 2);
+            midShoulder.Confidence = (leftShoulder.Confidence + rightShoulder.Confidence) / 2;
         }
 
-        public void DrawStickLine(ref WriteableBitmap image, uint id, UserGenerator userGenerator, SkeletonJoint first, SkeletonJoint second, Point3D corner)
+        public void DrawStickLine(ref WriteableBitmap image, int id, UserGenerator userGenerator, SkeletonJoint first, SkeletonJoint second, Point3D corner)
         {
             SkeletonJointPosition a = new SkeletonJointPosition();
             SkeletonJointPosition b = new SkeletonJointPosition();
 
-            userGenerator.GetSkeletonCap().GetSkeletonJointPosition(id, first, ref a);
-            userGenerator.GetSkeletonCap().GetSkeletonJointPosition(id, second, ref b);
+            a = userGenerator.SkeletonCapability.GetSkeletonJointPosition(id, first);
+            b = userGenerator.SkeletonCapability.GetSkeletonJointPosition(id, second);
 
-            if (a.fConfidence == 1 && b.fConfidence == 1)
+            if (a.Confidence == 1 && b.Confidence == 1)
             {
                 // choose color
             }
             else
             {
-                if ((a.position.X == 0 && a.position.Y == 0 && a.position.Z == 0) ||
-                    (b.position.X == 0 && b.position.Y == 0 && b.position.Z == 0))
+                if ((a.Position.X == 0 && a.Position.Y == 0 && a.Position.Z == 0) ||
+                    (b.Position.X == 0 && b.Position.Y == 0 && b.Position.Z == 0))
                 {
                     return;
                 }
@@ -107,6 +107,11 @@ namespace TrackingNI
         }
 
         public void DrawTheLine(ref WriteableBitmap image, ref SkeletonJointPosition joint1, ref SkeletonJointPosition joint2)
+        {
+            DrawTheLine(ref image, ConvertCoord(joint1, 0), ConvertCoord(joint2, 0));
+        }
+
+        public void DrawTheLine(ref WriteableBitmap image, int[] joint1Coord, int[] joint2Coord)
         {
             image.Lock();
 
@@ -120,9 +125,6 @@ namespace TrackingNI
                 bitmapGraphics.CompositingMode = CompositingMode.SourceCopy;
                 bitmapGraphics.CompositingQuality = CompositingQuality.HighSpeed;
 
-                int[] joint1Coord = ConvertCoord(joint1, 0);
-                int[] joint2Coord = ConvertCoord(joint2, 0);
-
                 bitmapGraphics.DrawLine(Pens.BlueViolet, joint1Coord[0], joint1Coord[1], joint2Coord[0], joint2Coord[1]);
                 bitmapGraphics.Dispose();
             }
@@ -131,7 +133,7 @@ namespace TrackingNI
             image.Unlock();
         }
 
-        public void DrawHeadAndHands(ref WriteableBitmap image, uint id, UserGenerator userGenerator, DepthGenerator depthGenerator) 
+        public void DrawHeadAndHands(ref WriteableBitmap image, int id, UserGenerator userGenerator, DepthGenerator depthGenerator) 
         {
             int headSize = 40; int handSize = 20;
 
@@ -139,9 +141,9 @@ namespace TrackingNI
             SkeletonJointPosition leftHand = new SkeletonJointPosition();
             SkeletonJointPosition rightHand = new SkeletonJointPosition();
 
-            userGenerator.GetSkeletonCap().GetSkeletonJointPosition(id, SkeletonJoint.Head, ref head);
-            userGenerator.GetSkeletonCap().GetSkeletonJointPosition(id, SkeletonJoint.LeftHand, ref leftHand);
-            userGenerator.GetSkeletonCap().GetSkeletonJointPosition(id, SkeletonJoint.RightHand, ref rightHand);
+            head = userGenerator.SkeletonCapability.GetSkeletonJointPosition(id, SkeletonJoint.Head);
+            leftHand = userGenerator.SkeletonCapability.GetSkeletonJointPosition(id, SkeletonJoint.LeftHand);
+            rightHand = userGenerator.SkeletonCapability.GetSkeletonJointPosition(id, SkeletonJoint.RightHand);
 
             image.Lock();
 
@@ -172,7 +174,7 @@ namespace TrackingNI
 
         public int[] ConvertCoord(SkeletonJointPosition joint, int offset)
         {
-            Point3D point = depthGenerator.ConvertRealWorldToProjective(joint.position);
+            Point3D point = depthGenerator.ConvertRealWorldToProjective(joint.Position);
             return new int[] { (point.X >= 0) ? (int)(point.X + offset) : 0, (point.Y >= 0) ? (int)(point.Y + offset) : 0 };
         }
 
@@ -189,47 +191,47 @@ namespace TrackingNI
                              0, 0, 255, 0, };
 
             image.Lock();
-            image.WritePixels(new Int32Rect(Convert.ToInt32(joint.position.X- 1),
-                                            Convert.ToInt32(joint.position.Y - 1),
+            image.WritePixels(new Int32Rect(Convert.ToInt32(joint.Position.X- 1),
+                                            Convert.ToInt32(joint.Position.Y - 1),
                                             3, 3), point, 4, 0);
             image.Unlock();
         }
 
-        public void DrawOrientation(ref WriteableBitmap image, uint id, UserGenerator userGenerator, SkeletonJoint joint, Point3D corner)
+        public void DrawOrientation(ref WriteableBitmap image, int id, UserGenerator userGenerator, SkeletonJoint joint, Point3D corner)
         {
             SkeletonJointOrientation orientation = new SkeletonJointOrientation();
             SkeletonJointPosition position = new SkeletonJointPosition();
 
-            userGenerator.GetSkeletonCap().GetSkeletonJointPosition(id, joint, ref position);
-            userGenerator.GetSkeletonCap().GetSkeletonJointOrientation(id, joint, ref orientation);
+            position = userGenerator.SkeletonCapability.GetSkeletonJointPosition(id, joint);
+            orientation = userGenerator.SkeletonCapability.GetSkeletonJointOrientation(id, joint);
 
-            if (position.fConfidence != 1 && orientation.Confidence != 1)
+            if (position.Confidence != 1 && orientation.Confidence != 1)
             {
                 return;
             }
 
             SkeletonJointPosition v1 = new SkeletonJointPosition();
             SkeletonJointPosition v2 = new SkeletonJointPosition();
-            v1.fConfidence = v2.fConfidence = 1;
+            v1.Confidence = v2.Confidence = 1;
 
-            v1.position = position.position;
-            v2.position = new Point3D(v1.position.X + 100 * orientation.Orientation.Elements[0],
-                                      v1.position.Y + 100 * orientation.Orientation.Elements[3],
-                                      v1.position.Z + 100 * orientation.Orientation.Elements[6]);
-
-            DrawTheLine(ref image, ref v1, ref v2);
-            
-            v1.position = position.position;
-            v2.position = new Point3D(v1.position.X + 100 * orientation.Orientation.Elements[1],
-                                      v1.position.Y + 100 * orientation.Orientation.Elements[4],
-                                      v1.position.Z + 100 * orientation.Orientation.Elements[7]);
+            v1.Position = position.Position;
+            v2.Position = new Point3D(v1.Position.X + 100 * orientation.X1,
+                                      v1.Position.Y + 100 * orientation.Y1,
+                                      v1.Position.Z + 100 * orientation.Z1);
 
             DrawTheLine(ref image, ref v1, ref v2);
             
-            v1.position = position.position;
-            v2.position = new Point3D(v1.position.X + 100 * orientation.Orientation.Elements[2],
-                                      v1.position.Y + 100 * orientation.Orientation.Elements[5],
-                                      v1.position.Z + 100 * orientation.Orientation.Elements[8]);
+            v1.Position = position.Position;
+            v2.Position = new Point3D(v1.Position.X + 100 * orientation.X2,
+                                      v1.Position.Y + 100 * orientation.Y2,
+                                      v1.Position.Z + 100 * orientation.Z2);
+
+            DrawTheLine(ref image, ref v1, ref v2);
+            
+            v1.Position = position.Position;
+            v2.Position = new Point3D(v1.Position.X + 100 * orientation.X3,
+                                      v1.Position.Y + 100 * orientation.Y3,
+                                      v1.Position.Z + 100 * orientation.Z3);
             
             DrawTheLine(ref image, ref v1, ref v2);
             

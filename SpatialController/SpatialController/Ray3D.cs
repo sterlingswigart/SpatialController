@@ -4,17 +4,17 @@ using System.Linq;
 using System.Text;
 using System.Windows.Media.Media3D;
 
-using xn;
+using OpenNI;
 
-namespace TrackingNI
+namespace SpatialController
 {
     public class Ray3D
     {
         private const double MAX_CALIBRATION_DISTANCE = 300.0;
         private const double MAX_COMMAND_DISTANCE = 400.0;
 
-        private Vector3D p0;
-        private Vector3D p1;
+        Vector3D p0;
+        Vector3D p1;
 
         public Ray3D()
         {
@@ -127,22 +127,14 @@ namespace TrackingNI
             return Math.Sqrt(dx * dx + dy * dy + dz * dz);
         }
 
-        public SkeletonJointPosition SkeletonJointPosition0()
+        public int[] point0()
         {
-            SkeletonJointPosition skp = new SkeletonJointPosition();
-            skp.position.X = (float)p0.X;
-            skp.position.Y = (float)p0.Y;
-            skp.position.Z = (float)p0.Z;
-            return skp;
+            return new int[3] { (int)p0.X, (int)p0.Y, (int)p0.Z };
         }
 
-        public SkeletonJointPosition SkeletonJointPosition1()
+        public int[] point1()
         {
-            SkeletonJointPosition skp = new SkeletonJointPosition();
-            skp.position.X = (float)p1.X;
-            skp.position.Y = (float)p1.Y;
-            skp.position.Z = (float)p1.Z;
-            return skp;
+            return new int[3] { (int)p1.X, (int)p1.Y, (int)p1.Z };
         }
 
         public override String ToString()

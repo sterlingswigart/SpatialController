@@ -37,7 +37,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="OpenNI.net">
+    <Reference Include="OpenNI.net, Version=1.1.0.38, Culture=neutral, PublicKeyToken=6b43d0c6cf74ee7f, processorArchitecture=x86">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>libs\OpenNI.net.dll</HintPath>
     </Reference>
     <Reference Include="OpenZWaveDotNet">
@@ -71,6 +72,9 @@
     <Compile Include="Ray3D.cs" />
     <Compile Include="SkeletonDraw.cs" />
     <Compile Include="SpatialController.cs" />
+    <Compile Include="UserPrompt.xaml.cs">
+      <DependentUpon>UserPrompt.xaml</DependentUpon>
+    </Compile>
     <Page Include="Console.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -87,6 +91,10 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Page Include="UserPrompt.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs">
@@ -115,6 +123,7 @@
   <ItemGroup>
     <Content Include="User.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <SubType>Designer</SubType>
     </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
