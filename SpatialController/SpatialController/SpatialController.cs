@@ -92,8 +92,6 @@ namespace SpatialController
 
             for (int i = 0; i < devices.Length; i++)
             {
-                // TODO: If intersection with returns [0,0,0] vector, save this device #
-                // and calibrate again on both sides.
                 Thread.Sleep(SEC_BETWEEN_CALIBRATIONS * 1000);
                 devices[i] = new Device(firstRays[i].intersectionWith(calibrateDeviceOnePosition(user, nodes[i])), nodes[i]);
             }

@@ -448,7 +448,6 @@ namespace SpatialController
 
         public void isInFocus()
         {
-            // TODO: Make on/off dependent on out-of-focus -> in-focus rather than just in-focus.
             if (inFocus)
             {
                 Console.Write("In focus!");
