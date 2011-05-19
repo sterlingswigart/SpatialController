@@ -109,7 +109,8 @@ namespace SpatialController
     // Actual device class used by SpatialController
     public class Device
     {
-        public const bool USE_ZWAVE = true;
+        public const bool USE_ZWAVE = false;
+        public const int NUM_MOCK_DEVICES = 1;
 
         // ==================================================
         // Z-wave interface code
@@ -182,20 +183,32 @@ namespace SpatialController
 
         public static byte[] getNodes()
         {
-            byte[] nodes = new byte[m_nodeList.Count];
-            for (int i = 0; i < m_nodeList.Count; i++)
-                nodes[i] = m_nodeList[i].ID;
-            return nodes;
+            if (USE_ZWAVE)
+            {
+                byte[] nodes = new byte[m_nodeList.Count];
+                for (int i = 0; i < m_nodeList.Count; i++)
+                    nodes[i] = m_nodeList[i].ID;
+                return nodes;
+            }
+            else
+            {
+                byte[] nodes = new byte[NUM_MOCK_DEVICES];
+                for (int i = 0; i < NUM_MOCK_DEVICES; i++)
+                    nodes[i] = (byte)i;
+                return nodes;
+            }
         }
 
         public static void turnOn(byte deviceId)
         {
-            m_manager.SetNodeOn(m_homeId, deviceId);
+            if (USE_ZWAVE)
+                m_manager.SetNodeOn(m_homeId, deviceId);
         }
 
         public static void turnOff(byte deviceId)
         {
-            m_manager.SetNodeOff(m_homeId, deviceId);
+            if (USE_ZWAVE)
+                m_manager.SetNodeOff(m_homeId, deviceId);
         }
 
         /// <summary>
@@ -423,7 +436,7 @@ namespace SpatialController
 
         private byte deviceId;
 
-        public Device(Vector3D position/*, TODO: device handler */, byte deviceId)
+        public Device(Vector3D position, byte deviceId)
         {
             this.on = false;
             this.inFocus = false;

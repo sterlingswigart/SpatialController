@@ -39,20 +39,14 @@ namespace SpatialController
             get { lock (animationLock) { return raysToBeAnimated; } }
         }
 
-        public SpatialController(ControllerStartup startupType, UserGenerator userGenerator, params Device[] devices)
+        public SpatialController(ControllerStartup startupType, UserGenerator userGenerator)
         {
             this.raysToBeAnimated = new Ray3D[2]; // Left and right, in this case.
             this.userGenerator = userGenerator;
             this.animationLock = new object();
-            
-            byte[] nodes = Device.getNodes();
-            int numRealDevices = nodes.Length;
-            if (numRealDevices == 0)
-                this.calibrated = true; // We know where they are!
-            else
-                this.calibrated = false;
+            this.calibrated = false;
 
-            this.devices = new Device[numRealDevices + devices.Length];
+            this.devices = new Device[Device.getNodes().Length];
             for (int i = 0; i < devices.Length; i++)
             {
                 this.devices[i] = devices[i];
@@ -64,7 +58,7 @@ namespace SpatialController
             {
                 case ControllerStartup.FromFile:
                     initFromFile();
-                    calibrated = true;
+                    this.calibrated = true;
                     break;
                 case ControllerStartup.Calibrate:
                     // Wait for user to be recognized to start calibration.
@@ -112,6 +106,7 @@ namespace SpatialController
 
         private Ray3D calibrateDeviceOnePosition(int user, byte device)
         {
+            UserPrompt.Write("Turning on device " + device);
             Device.turnOn(device);
             Thread.Sleep(CALIBRATION_OFFSET_SEC * 1000);
             Vector3D[] headPoints = new Vector3D[STEADY_SEC * SAMPLES_PER_SEC];
@@ -135,6 +130,7 @@ namespace SpatialController
             Vector3D averageRightHandPoint = new Vector3D(rightHandPoints.Average(x => x.X),
                     rightHandPoints.Average(x => x.Y), rightHandPoints.Average(x => x.Z));
 
+            UserPrompt.Write("Turning off device " + device);
             Device.turnOff(device);
             return new Ray3D(averageHeadPoint, averageRightHandPoint);
         }

@@ -56,6 +56,12 @@ namespace SpatialController
         private SpatialController spatialController;
         private SkeletonDraw skeletonDraw;
 
+        private Thread kinectDataThread;
+        private Thread checkGesturesThread;
+        private DispatcherTimer imageTimer;
+
+        private bool stop;
+
         private int[] Histogram { get; set; }
 
         public MainWindow()
@@ -64,6 +70,7 @@ namespace SpatialController
 
             trackingUser = false;
             trackingUserId = 0;
+            stop = false;
 
             console = new Console();
             console.Show();
@@ -71,12 +78,12 @@ namespace SpatialController
             console.Left = 10;
 
             prompt = new UserPrompt();
-            console.Show();
-            console.Top = 10;
-            console.Left = 530;
+            prompt.Show();
+            prompt.Top = 10;
+            prompt.Left = 550;
 
-            this.Top = 300;
-            this.Left = 530;
+            this.Top = 250;
+            this.Left = 550;
 
             context = new Context(CONFIG_FILE);
             imageGenerator = new ImageGenerator(context);
@@ -99,15 +106,13 @@ namespace SpatialController
 
             Device.SetUp();
 
-            Device mock1 = new Device(new Vector3D(0, 0, 0), 0);
-
             if (File.Exists(SpatialController.CALIBRATION_DATA_FILE))
             {
-                spatialController = new SpatialController(ControllerStartup.FromFile, userGenerator, mock1);
+                spatialController = new SpatialController(ControllerStartup.FromFile, userGenerator);
             }
             else
             {
-                spatialController = new SpatialController(ControllerStartup.Calibrate, userGenerator, mock1);
+                spatialController = new SpatialController(ControllerStartup.Calibrate, userGenerator);
             }
 
             userGenerator.NewUser += NewUser;
@@ -119,20 +124,31 @@ namespace SpatialController
             poseDetectionCapability.PoseDetected += PoseDetected;
             poseDetectionCapability.PoseEnded += PoseEnded;
 
+            /*
             DispatcherTimer kinectDataTimer = new DispatcherTimer();
             kinectDataTimer.Tick += new EventHandler(KinectDataTick);
             kinectDataTimer.Interval = new TimeSpan(0, 0, 0, 0, 100);
             kinectDataTimer.Start();
 
-            DispatcherTimer imageTimer = new DispatcherTimer();
-            imageTimer.Tick += new EventHandler(ImageTick);
-            imageTimer.Interval = new TimeSpan(0, 0, 0, 0, 100);
-            imageTimer.Start();
-
             DispatcherTimer checkGesturesTimer = new DispatcherTimer();
             checkGesturesTimer.Tick += new EventHandler(CheckGesturesTick);
             checkGesturesTimer.Interval = new TimeSpan(0, 0, 0, 0, 200);
             checkGesturesTimer.Start();
+            */
+
+            kinectDataThread = new Thread(new ThreadStart(ReadKinectData));
+            kinectDataThread.IsBackground = true;
+
+            checkGesturesThread = new Thread(new ThreadStart(CheckGestures));
+            checkGesturesThread.IsBackground = true;
+
+            imageTimer = new DispatcherTimer();
+            imageTimer.Tick += new EventHandler(ImageTick);
+            imageTimer.Interval = new TimeSpan(0, 0, 0, 0, 100);
+
+            kinectDataThread.Start();
+            checkGesturesThread.Start();
+            imageTimer.Start();
 
             UserPrompt.Write("Finished loading window.");
             Console.Write("Finished loading window");
@@ -180,7 +196,7 @@ namespace SpatialController
         {
             Console.Write(e.ID + " Detected pose " + e.Pose);
             userGenerator.PoseDetectionCapability.StopPoseDetection(e.ID);
-            userGenerator.SkeletonCapability.RequestCalibration(e.ID, false);
+            userGenerator.SkeletonCapability.RequestCalibration(e.ID, true);
         }
 
         private void PoseEnded(object sender, PoseEndedEventArgs e)
@@ -188,15 +204,27 @@ namespace SpatialController
             Console.Write(e.ID + " Lost Pose " + e.Pose);
         }
 
-        private void KinectDataTick(object sender, EventArgs e)
+        private void ReadKinectData()
         {
-            try
+            while (!stop)
             {
-                context.WaitAndUpdateAll();
-                imageGenerator.GetMetaData(imageData);
-                //depthGenerator.GetMetaData(depthData);
+                try
+                {
+                    context.WaitAndUpdateAll();
+                    imageGenerator.GetMetaData(imageData);
+                    //depthGenerator.GetMetaData(depthData);
+                }
+                catch (Exception) { }
             }
-            catch (Exception) { }
+        }
+
+        private void CheckGestures()
+        {
+            while (!stop)
+            {
+                spatialController.checkGestures();
+                Thread.Sleep(100);
+            }
         }
 
         private void ImageTick(object sender, EventArgs e)
@@ -206,9 +234,11 @@ namespace SpatialController
                 imgDepth.Source = RawImageSource;
         }
 
-        private void CheckGesturesTick(object sender, EventArgs e)
+        private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            spatialController.checkGestures();
+            stop = true;
+            console.Close();
+            prompt.Close();
         }
 
         // Thanks to Vangos Pterneas for these functions.

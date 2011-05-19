@@ -42,8 +42,8 @@ namespace SpatialController
             // Algorithm is ported from the C algorithm of 
             // Paul Bourke at http://local.wasp.uwa.edu.au/~pbourke/geometry/lineline3d/.
             // Port to C# done by Ronald Hulthuizen.
-            Vector3D p1 = p0;
-            Vector3D p2 = p1;
+            Vector3D p1 = this.p0;
+            Vector3D p2 = this.p1;
             Vector3D p3 = other.p0;
             Vector3D p4 = other.p1;
 
@@ -52,7 +52,7 @@ namespace SpatialController
             if (p43.LengthSquared < Double.Epsilon)
                 return new Vector3D();
             Vector3D p21 = p2 - p1;
-            if (p21.LengthSquared < Double.Epsilon)
+            if (p21.LengthSquared < Double.Epsilon) // FIXME: p21 = {0,0,0}
                 return new Vector3D();
 
             // Dot product multiplication.
