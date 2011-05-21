@@ -5,6 +5,12 @@ using System.Text;
 using System.Threading;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
+using SpeechLib;
+using System.Speech;
+using System.Speech.Synthesis;
+using System.IO;
+using System.Reflection;
+using System.Runtime.InteropServices;
 
 using OpenNI;
 
@@ -14,6 +20,64 @@ namespace SpatialController
     {
         FromFile,
         Calibrate
+    }
+
+    public class Sound
+    {
+        private byte[] m_soundBytes;
+        private string m_fileName;
+
+        private enum Flags
+        {
+            SND_SYNC = 0x0000,  /* play synchronously (default) */
+            SND_ASYNC = 0x0001,  /* play asynchronously */
+            SND_NODEFAULT = 0x0002,  /* silence (!default) if sound not found */
+            SND_MEMORY = 0x0004,  /* pszSound points to a memory file */
+            SND_LOOP = 0x0008,  /* loop the sound until next sndPlaySound */
+            SND_NOSTOP = 0x0010,  /* don't stop any currently playing sound */
+            SND_NOWAIT = 0x00002000, /* don't wait if the driver is busy */
+            SND_ALIAS = 0x00010000, /* name is a registry alias */
+            SND_ALIAS_ID = 0x00110000, /* alias is a predefined ID */
+            SND_FILENAME = 0x00020000, /* name is file name */
+            SND_RESOURCE = 0x00040004  /* name is resource name or atom */
+        }
+
+        [DllImport("CoreDll.DLL", EntryPoint = "PlaySound", SetLastError = true)]
+        private extern static int WCE_PlaySound(string szSound, IntPtr hMod, int flags);
+
+        [DllImport("CoreDll.DLL", EntryPoint = "PlaySound", SetLastError = true)]
+        private extern static int WCE_PlaySoundBytes(byte[] szSound, IntPtr hMod, int flags);
+
+        /// <summary>
+        /// Construct the Sound object to play sound data from the specified file.
+        /// </summary>
+        public Sound(string fileName)
+        {
+            m_fileName = fileName;
+        }
+
+        /// <summary>
+        /// Construct the Sound object to play sound data from the specified stream.
+        /// </summary>
+        public Sound(Stream stream)
+        {
+            // read the data from the stream
+            m_soundBytes = new byte[stream.Length];
+            stream.Read(m_soundBytes, 0, (int)stream.Length);
+        }
+
+        /// <summary>
+        /// Play the sound
+        /// </summary>
+        public void Play()
+        {
+            // if a file name has been registered, call WCE_PlaySound,
+            //  otherwise call WCE_PlaySoundBytes
+            if (m_fileName != null)
+                WCE_PlaySound(m_fileName, IntPtr.Zero, (int)(Flags.SND_ASYNC | Flags.SND_FILENAME));
+            else
+                WCE_PlaySoundBytes(m_soundBytes, IntPtr.Zero, (int)(Flags.SND_ASYNC | Flags.SND_MEMORY));
+        }
     }
 
     class SpatialController
@@ -34,10 +98,15 @@ namespace SpatialController
         private object animationLock;
         private Ray3D[] raysToBeAnimated; // Note: Only works for one user.
 
+        private SpeechSynthesizer synth;
+
         public Ray3D[] RaysToBeAnimated
         {
             get { lock (animationLock) { return raysToBeAnimated; } }
         }
+
+        
+
 
         public SpatialController(ControllerStartup startupType, UserGenerator userGenerator)
         {
@@ -52,7 +121,17 @@ namespace SpatialController
                 this.devices[i] = devices[i];
             }
 
-            Console.Write("Starting SpatialController!");
+            synth = new SpeechSynthesizer();
+            synth.SelectVoice("Microsoft Anna");
+            //To be removed later
+            synth.Speak("Starting SpatialController!");
+
+            //Play the beep sound to test it
+            Sound sound = new Sound ("\\beep-6.wav");
+            sound.Play();
+            
+
+            //Console.Write("Starting SpatialController!");
 
             switch (startupType)
             {
@@ -74,9 +153,16 @@ namespace SpatialController
         {
             byte[] nodes = Device.getNodes();
             Ray3D[] firstRays = new Ray3D[devices.Length];
-            UserPrompt.Write("Please stand about 10 feet away from the kinect on the right"
+
+            synth.Speak("Please stand about 10 feet away from the kinect on the right"
                     + " side of the field of view, but leave room for pointing off to the right.");
-            UserPrompt.Write("When a light turns on, please point to it until it turns off.");
+
+            //UserPrompt.Write("Please stand about 10 feet away from the kinect on the right"
+            //        + " side of the field of view, but leave room for pointing off to the right.");
+
+            synth.Speak("When a light turns on, please point to it until it turns off.");
+
+            //UserPrompt.Write("When a light turns on, please point to it until it turns off.");
             Thread.Sleep((SEC_FOR_RELOCATION - SEC_BETWEEN_CALIBRATIONS) * 1000);
 
             for (int i = 0; i < devices.Length; i++)
@@ -85,9 +171,11 @@ namespace SpatialController
                 firstRays[i] = calibrateDeviceOnePosition(user, nodes[i]);
             }
 
-            UserPrompt.Write("Please stand about 5 feet away from the kinect on the left"
-                    + " side of the field of view, but leave room for pointing off to the left.");
-            UserPrompt.Write("Once again, when a light turns on, please point to it until it turns off.");
+            synth.Speak("Once again, when a light turns on, please point to it until it turns off.");
+
+            //UserPrompt.Write("Please stand about 5 feet away from the kinect on the left"
+            //        + " side of the field of view, but leave room for pointing off to the left.");
+            //UserPrompt.Write("Once again, when a light turns on, please point to it until it turns off.");
             Thread.Sleep((SEC_FOR_RELOCATION - SEC_BETWEEN_CALIBRATIONS) * 1000);
 
             for (int i = 0; i < devices.Length; i++)
@@ -98,13 +186,18 @@ namespace SpatialController
 
             saveCalibrationToFile(devices);
             calibrated = true;
-            UserPrompt.Write("Calibration has been completed. After a few seconds, you should be able"
+
+            synth.Speak("Calibration has been completed. After a few seconds, you should be able"
                     + " to point to lights to turn them on!");
+            //UserPrompt.Write("Calibration has been completed. After a few seconds, you should be able"
+            //        + " to point to lights to turn them on!");
         }
 
         private Ray3D calibrateDeviceOnePosition(int user, byte device)
         {
-            UserPrompt.Write("Turning on device " + device);
+
+            synth.Speak("Turning on device " + device);
+            //UserPrompt.Write("Turning on device " + device);
             Device.turnOn(device);
             Thread.Sleep(CALIBRATION_OFFSET_SEC * 1000);
             Vector3D[] headPoints = new Vector3D[STEADY_SEC * SAMPLES_PER_SEC];
@@ -128,7 +221,8 @@ namespace SpatialController
             Vector3D averageRightHandPoint = new Vector3D(rightHandPoints.Average(x => x.X),
                     rightHandPoints.Average(x => x.Y), rightHandPoints.Average(x => x.Z));
 
-            UserPrompt.Write("Turning off device " + device);
+            synth.Speak("Turning off device " + device);
+            //UserPrompt.Write("Turning off device " + device);
             Device.turnOff(device);
             return new Ray3D(averageHeadPoint, averageRightHandPoint);
         }
