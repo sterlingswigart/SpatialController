@@ -155,14 +155,14 @@ namespace SpatialController
         //The text being recognized
         private void Reco_Event(int StreamNumber, object StreamPosition, SpeechRecognitionType RecognitionType, ISpeechRecoResult Result)
         {
-            String textToSay = "Did you say: " + Result.PhraseInfo.GetText(0, -1, true);
+            String textToSay = Result.PhraseInfo.GetText(0, -1, true);
             synth.Speak(textToSay);
         }
 
         //The result text
         private void Hypo_Event(int StreamNumber, object StreamPosition, ISpeechRecoResult Result)
         {
-            String textToSay = "Did you say: " + Result.PhraseInfo.GetText(0, -1, true);
+            String textToSay = Result.PhraseInfo.GetText(0, -1, true);
             synth.Speak(textToSay);
         }
 
