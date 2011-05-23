@@ -185,14 +185,14 @@ namespace SpatialController
             //Activate the Menu Commands.			
             menuRule = grammar.Rules.Add("MenuCommands", SpeechRuleAttributes.SRATopLevel | SpeechRuleAttributes.SRADynamic, 1);
             object PropValue = "";
-            menuRule.InitialState.AddWordTransition(null, "New", " ", SpeechGrammarWordType.SGLexical, "New", 1, ref PropValue, 1.0F);
-            menuRule.InitialState.AddWordTransition(null, "Open", " ", SpeechGrammarWordType.SGLexical, "Open", 2, ref PropValue, 1.0F);
-            menuRule.InitialState.AddWordTransition(null, "Close", " ", SpeechGrammarWordType.SGLexical, "Close", 3, ref PropValue, 1.0F);
-            menuRule.InitialState.AddWordTransition(null, "Exit", " ", SpeechGrammarWordType.SGLexical, "Exit", 4, ref PropValue, 1.0F);
-            menuRule.InitialState.AddWordTransition(null, "Cut", " ", SpeechGrammarWordType.SGLexical, "Cut", 5, ref PropValue, 1.0F);
-            menuRule.InitialState.AddWordTransition(null, "Copy", " ", SpeechGrammarWordType.SGLexical, "Copy", 6, ref PropValue, 1.0F);
-            menuRule.InitialState.AddWordTransition(null, "Paste", " ", SpeechGrammarWordType.SGLexical, "Paste", 7, ref PropValue, 1.0F);
-            menuRule.InitialState.AddWordTransition(null, "Delete", " ", SpeechGrammarWordType.SGLexical, "Delete", 8, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "Cancel", " ", SpeechGrammarWordType.SGLexical, "Cancel", 1, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "Yes", " ", SpeechGrammarWordType.SGLexical, "Yes", 2, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "No", " ", SpeechGrammarWordType.SGLexical, "No", 3, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "Lights Off", " ", SpeechGrammarWordType.SGLexical, "Lights Off", 4, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "Lights On", " ", SpeechGrammarWordType.SGLexical, "Lights On", 5, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "First Light", " ", SpeechGrammarWordType.SGLexical, "First Light", 6, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "Second Light", " ", SpeechGrammarWordType.SGLexical, "Second Light", 7, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "Third Light", " ", SpeechGrammarWordType.SGLexical, "Third Light", 8, ref PropValue, 1.0F);
             grammar.Rules.Commit();
             grammar.CmdSetRuleState("MenuCommands", SpeechRuleState.SGDSActive);
         }
