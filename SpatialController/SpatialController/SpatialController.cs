@@ -99,6 +99,9 @@ namespace SpatialController
         private Ray3D[] raysToBeAnimated; // Note: Only works for one user.
 
         private SpeechSynthesizer synth;
+        private SpeechLib.SpSharedRecoContext objRecoContext = null;
+        private SpeechLib.ISpeechRecoGrammar grammar = null;
+        private SpeechLib.ISpeechGrammarRule menuRule = null;
 
         public Ray3D[] RaysToBeAnimated
         {
@@ -126,6 +129,8 @@ namespace SpatialController
             //To be removed later
             synth.Speak("Starting SpatialController!");
 
+            
+
             //Play the beep sound to test it
             Sound sound = new Sound ("\\beep-6.wav");
             sound.Play();
@@ -146,6 +151,52 @@ namespace SpatialController
                     break;
             }
         }
+
+        //The text being recognized
+        private void Reco_Event(int StreamNumber, object StreamPosition, SpeechRecognitionType RecognitionType, ISpeechRecoResult Result)
+        {
+            String textToSay = "Did you say: " + Result.PhraseInfo.GetText(0, -1, true);
+            synth.Speak(textToSay);
+        }
+
+        //The result text
+        private void Hypo_Event(int StreamNumber, object StreamPosition, ISpeechRecoResult Result)
+        {
+            String textToSay = "Did you say: " + Result.PhraseInfo.GetText(0, -1, true);
+            synth.Speak(textToSay);
+        }
+
+        private void VoiceCalibration()
+        {
+            // Get an insance of RecoContext. I am using the shared RecoContext.
+            objRecoContext = new SpeechLib.SpSharedRecoContext();
+            // Assign a eventhandler for the Hypothesis Event.
+            objRecoContext.Hypothesis += new _ISpeechRecoContextEvents_HypothesisEventHandler(Hypo_Event);
+            // Assign a eventhandler for the Recognition Event.
+            objRecoContext.Recognition += new
+                _ISpeechRecoContextEvents_RecognitionEventHandler(Reco_Event);
+            //Creating an instance of the grammer object.
+            grammar = objRecoContext.CreateGrammar(0);
+
+            SpeechSynthesizer synth = new SpeechSynthesizer();
+            synth.SelectVoice("Microsoft Anna");
+            synth.Speak("Hello, my name is Anna, can I help you?");
+
+            //Activate the Menu Commands.			
+            menuRule = grammar.Rules.Add("MenuCommands", SpeechRuleAttributes.SRATopLevel | SpeechRuleAttributes.SRADynamic, 1);
+            object PropValue = "";
+            menuRule.InitialState.AddWordTransition(null, "New", " ", SpeechGrammarWordType.SGLexical, "New", 1, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "Open", " ", SpeechGrammarWordType.SGLexical, "Open", 2, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "Close", " ", SpeechGrammarWordType.SGLexical, "Close", 3, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "Exit", " ", SpeechGrammarWordType.SGLexical, "Exit", 4, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "Cut", " ", SpeechGrammarWordType.SGLexical, "Cut", 5, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "Copy", " ", SpeechGrammarWordType.SGLexical, "Copy", 6, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "Paste", " ", SpeechGrammarWordType.SGLexical, "Paste", 7, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "Delete", " ", SpeechGrammarWordType.SGLexical, "Delete", 8, ref PropValue, 1.0F);
+            grammar.Rules.Commit();
+            grammar.CmdSetRuleState("MenuCommands", SpeechRuleState.SGDSActive);
+        }
+
 
         // Calibrate the locations of devices in the room, saving calibration
         // data in CALIBRATION_DATA_FILE. Use only right hand for pointing.
