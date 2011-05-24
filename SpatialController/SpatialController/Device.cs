@@ -181,20 +181,24 @@ namespace SpatialController
             }
         }
 
-        public static byte[] getNodes()
+        public static List<byte> getNodes()
         {
             if (USE_ZWAVE)
             {
-                byte[] nodes = new byte[m_nodeList.Count];
+                List<byte> nodes = new List<byte>();
                 for (int i = 0; i < m_nodeList.Count; i++)
-                    nodes[i] = m_nodeList[i].ID;
+                {
+                    String nodeType = m_manager.GetNodeType(m_homeId, m_nodeList[i].ID).ToString();
+                    if (nodeType == "Binary Power Switch" || nodeType == "Multilevel Power Switch" || nodeType == "Multilevel Switch")
+                        nodes.Add(m_nodeList[i].ID);
+                }
                 return nodes;
             }
             else
             {
-                byte[] nodes = new byte[NUM_MOCK_DEVICES];
+                List<byte> nodes = new List<byte>();
                 for (int i = 0; i < NUM_MOCK_DEVICES; i++)
-                    nodes[i] = (byte)i;
+                    nodes.Add((byte)i);
                 return nodes;
             }
         }

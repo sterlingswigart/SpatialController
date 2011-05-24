@@ -46,7 +46,7 @@ namespace SpatialController
             this.animationLock = new object();
             this.calibrated = false;
 
-            this.devices = new Device[Device.getNodes().Length];
+            this.devices = new Device[Device.getNodes().Count];
             for (int i = 0; i < devices.Length; i++)
             {
                 this.devices[i] = devices[i];
@@ -72,7 +72,7 @@ namespace SpatialController
         // data in CALIBRATION_DATA_FILE. Use only right hand for pointing.
         private void calibrate(int user)
         {
-            byte[] nodes = Device.getNodes();
+            List<byte> nodes = Device.getNodes();
             Ray3D[] firstRays = new Ray3D[devices.Length];
             UserPrompt.Write("Please stand about 10 feet away from the kinect on the right"
                     + " side of the field of view, but leave room for pointing off to the right.");
