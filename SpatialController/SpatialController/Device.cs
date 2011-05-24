@@ -109,7 +109,7 @@ namespace SpatialController
     // Actual device class used by SpatialController
     public class Device
     {
-        public const bool USE_ZWAVE = false;
+        public const bool USE_ZWAVE = true;
         public const int NUM_MOCK_DEVICES = 1;
 
         // ==================================================

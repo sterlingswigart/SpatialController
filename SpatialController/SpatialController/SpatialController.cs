@@ -73,13 +73,13 @@ namespace SpatialController
         private void calibrate(int user)
         {
             List<byte> nodes = Device.getNodes();
-            Ray3D[] firstRays = new Ray3D[devices.Length];
+            Ray3D[] firstRays = new Ray3D[nodes.Count];
             UserPrompt.Write("Please stand about 10 feet away from the kinect on the right"
                     + " side of the field of view, but leave room for pointing off to the right.");
             UserPrompt.Write("When a light turns on, please point to it until it turns off.");
             Thread.Sleep((SEC_FOR_RELOCATION - SEC_BETWEEN_CALIBRATIONS) * 1000);
 
-            for (int i = 0; i < devices.Length; i++)
+            for (int i = 0; i < nodes.Count; i++)
             {
                 Thread.Sleep(SEC_BETWEEN_CALIBRATIONS * 1000);
                 firstRays[i] = calibrateDeviceOnePosition(user, nodes[i]);
@@ -90,7 +90,7 @@ namespace SpatialController
             UserPrompt.Write("Once again, when a light turns on, please point to it until it turns off.");
             Thread.Sleep((SEC_FOR_RELOCATION - SEC_BETWEEN_CALIBRATIONS) * 1000);
 
-            for (int i = 0; i < devices.Length; i++)
+            for (int i = 0; i < nodes.Count; i++)
             {
                 Thread.Sleep(SEC_BETWEEN_CALIBRATIONS * 1000);
                 devices[i] = new Device(firstRays[i].intersectionWith(calibrateDeviceOnePosition(user, nodes[i])), nodes[i]);

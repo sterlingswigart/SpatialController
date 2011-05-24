@@ -78,7 +78,7 @@ namespace SpatialController
 
             double distance = distance3D(resultSegmentPoint1, resultSegmentPoint2);
 
-            if (distance <= MAX_CALIBRATION_DISTANCE)
+            if (distance > MAX_CALIBRATION_DISTANCE)
                 return new Vector3D();
 
             // Find the point half of that distance down the line by adding the vectors
