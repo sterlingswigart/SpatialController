@@ -22,8 +22,12 @@ namespace SpatialController
         Calibrate
     }
 
+    delegate void RecalibrateEventHandler(object sender, EventArgs e);
+
     class SpatialController
     {
+        public event RecalibrateEventHandler RecalibrateCommand;
+
         public const string CALIBRATION_DATA_FILE = "calibration.txt";
         private const int CALIBRATION_SEC = 9;
         private const int CALIBRATION_OFFSET_SEC = 4;
@@ -298,6 +302,11 @@ namespace SpatialController
                 else if (command.Contains("off"))
                     Device.turnOffAll();
             }
+            else if (command.Contains("recalibrate"))
+            {
+                if (RecalibrateCommand != null)
+                    RecalibrateCommand(this, EventArgs.Empty);
+            }
         }
 
         private void VoiceCalibration()
@@ -325,6 +334,7 @@ namespace SpatialController
             menuRule.InitialState.AddWordTransition(null, "First Light Off", " ", SpeechGrammarWordType.SGLexical, "First Light Off", 9, ref PropValue, 1.0F);
             menuRule.InitialState.AddWordTransition(null, "Second Light Off", " ", SpeechGrammarWordType.SGLexical, "Second Light Off", 10, ref PropValue, 1.0F);
             menuRule.InitialState.AddWordTransition(null, "Third Light Off", " ", SpeechGrammarWordType.SGLexical, "Third Light Off", 11, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "Recalibrate", " ", SpeechGrammarWordType.SGLexical, "Recalibrate", 12, ref PropValue, 1.0F);
             grammar.Rules.Commit();
             grammar.CmdSetRuleState("MenuCommands", SpeechRuleState.SGDSActive);
         }

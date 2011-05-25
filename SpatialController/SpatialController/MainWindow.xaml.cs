@@ -28,6 +28,7 @@ namespace SpatialController
     public partial class MainWindow : Window
     {
         private const bool DRAW_SKELETON = true;
+        private const string SKELETON_CALIBRATION_FILE = "skeleton.cal";
 
         // Only can track one user now for performance reasons.
         private bool trackingUser;
@@ -115,6 +116,8 @@ namespace SpatialController
                 spatialController = new SpatialController(ControllerStartup.Calibrate, userGenerator);
             }
 
+            spatialController.RecalibrateCommand += new RecalibrateEventHandler(RecalibrateCommand);
+
             userGenerator.NewUser += NewUser;
             userGenerator.LostUser += LostUser;
             
@@ -123,18 +126,6 @@ namespace SpatialController
             skeletonCapability.SetSkeletonProfile(SkeletonProfile.All);
             poseDetectionCapability.PoseDetected += PoseDetected;
             poseDetectionCapability.PoseEnded += PoseEnded;
-
-            /*
-            DispatcherTimer kinectDataTimer = new DispatcherTimer();
-            kinectDataTimer.Tick += new EventHandler(KinectDataTick);
-            kinectDataTimer.Interval = new TimeSpan(0, 0, 0, 0, 100);
-            kinectDataTimer.Start();
-
-            DispatcherTimer checkGesturesTimer = new DispatcherTimer();
-            checkGesturesTimer.Tick += new EventHandler(CheckGesturesTick);
-            checkGesturesTimer.Interval = new TimeSpan(0, 0, 0, 0, 200);
-            checkGesturesTimer.Start();
-            */
 
             kinectDataThread = new Thread(new ThreadStart(ReadKinectData));
             kinectDataThread.IsBackground = true;
@@ -159,7 +150,14 @@ namespace SpatialController
 
         private void NewUser(object sender, NewUserEventArgs e)
         {
-            userGenerator.PoseDetectionCapability.StartPoseDetection(userGenerator.SkeletonCapability.CalibrationPose, e.ID);
+            if (File.Exists(SKELETON_CALIBRATION_FILE) && !trackingUser)
+            {
+                userGenerator.SkeletonCapability.LoadCalibrationDataFromFile(e.ID, SKELETON_CALIBRATION_FILE);
+                trackingUser = true;
+                trackingUserId = e.ID;
+            }
+            else
+                userGenerator.PoseDetectionCapability.StartPoseDetection(userGenerator.SkeletonCapability.CalibrationPose, e.ID);
             Console.Write(e.ID + " Found new user");
         }
 
@@ -185,6 +183,7 @@ namespace SpatialController
                 userGenerator.SkeletonCapability.StartTracking(e.ID);
                 trackingUser = true;
                 trackingUserId = e.ID;
+                userGenerator.SkeletonCapability.SaveCalibrationDataToFile(trackingUserId, "skeleton.cal");
             }
             else
             {
@@ -202,6 +201,14 @@ namespace SpatialController
         private void PoseEnded(object sender, PoseEndedEventArgs e)
         {
             Console.Write(e.ID + " Lost Pose " + e.Pose);
+        }
+
+        private void RecalibrateCommand(object sender, EventArgs e)
+        {
+            Console.Write("Recalibration requested--stopping current skeletal tracking.");
+            if (userGenerator.SkeletonCapability.IsTracking(trackingUserId))
+                userGenerator.SkeletonCapability.StopTracking(trackingUserId);
+            trackingUser = false;
         }
 
         private void ReadKinectData()
