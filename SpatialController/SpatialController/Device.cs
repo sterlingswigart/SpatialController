@@ -204,10 +204,22 @@ namespace SpatialController
             }
         }
 
+        public static void turnOnAll()
+        {
+            if (USE_ZWAVE)
+                m_manager.SwitchAllOn(m_homeId);
+        }
+
         public static void turnOn(byte deviceId)
         {
             if (USE_ZWAVE)
                 m_manager.SetNodeOn(m_homeId, deviceId);
+        }
+
+        public static void turnOffAll()
+        {
+            if (USE_ZWAVE)
+                m_manager.SwitchAllOff(m_homeId);
         }
 
         public static void turnOff(byte deviceId)
@@ -429,6 +441,7 @@ namespace SpatialController
         // ==================================================
 
         public Vector3D position;
+        public byte deviceId;
 
         private const int ACTIVATION_MS = 400;
         private const int DEBOUNCE_MS = 2000;
@@ -437,7 +450,6 @@ namespace SpatialController
         private bool on;
         private DateTime lastActionTime;
         private DateTime focusStartTime;
-        private byte deviceId;
         private SoundPlayer sound;
 
         public Device(Vector3D position, byte deviceId)

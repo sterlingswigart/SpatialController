@@ -251,18 +251,53 @@ namespace SpatialController
             Console.Write("=============================");
         }
 
-        //The text being recognized
         private void Reco_Event(int StreamNumber, object StreamPosition, SpeechRecognitionType RecognitionType, ISpeechRecoResult Result)
         {
-            String textToSay = Result.PhraseInfo.GetText(0, -1, true);
-            synth.Speak("Recognition: " + textToSay);
+            String text = Result.PhraseInfo.GetText(0, -1, true);
+            synth.Speak("Recognition: " + text); // DEBUG
+
+            // TODO: For "Do you mean?" functionality, check yes/no NOT in the following function
+            //      because they are not actions.
+
+            DoActionFromVoiceCommand(text);
         }
 
-        //The result text
         private void Hypo_Event(int StreamNumber, object StreamPosition, ISpeechRecoResult Result)
         {
-            String textToSay = Result.PhraseInfo.GetText(0, -1, true);
-            synth.Speak("Hypothesis: " + textToSay);
+            String text = Result.PhraseInfo.GetText(0, -1, true);
+            synth.Speak("Hypothesis: " + text); // DEBUG
+            
+            // TODO: Did you mean? If "yes", call DoActionFromVoiceCommand(text).
+        }
+
+        private void DoActionFromVoiceCommand(string command)
+        {
+            command = command.ToLower();
+            if (command.Contains("light "))
+            {
+                int lightIndex = -1;
+                if (command.Contains("first"))
+                    lightIndex = 1;
+                else if (command.Contains("second"))
+                    lightIndex = 2;
+                else if (command.Contains("third"))
+                    lightIndex = 3;
+
+                if (lightIndex > 0 && devices.Length < lightIndex)
+                {
+                    if (command.Contains("on"))
+                        Device.turnOn(devices[lightIndex].deviceId);
+                    else if (command.Contains("off"))
+                        Device.turnOff(devices[lightIndex].deviceId);
+                }
+            }
+            else if (command.Contains("all lights"))
+            {
+                if (command.Contains("on"))
+                    Device.turnOnAll();
+                else if (command.Contains("off"))
+                    Device.turnOffAll();
+            }
         }
 
         private void VoiceCalibration()
@@ -276,17 +311,20 @@ namespace SpatialController
             //Creating an instance of the grammer object.
             grammar = objRecoContext.CreateGrammar(0);
 
-            //Activate the Menu Commands.			
+            //Activate the Menu Commands.
             menuRule = grammar.Rules.Add("MenuCommands", SpeechRuleAttributes.SRATopLevel | SpeechRuleAttributes.SRADynamic, 1);
             object PropValue = "";
             menuRule.InitialState.AddWordTransition(null, "Cancel", " ", SpeechGrammarWordType.SGLexical, "Cancel", 1, ref PropValue, 1.0F);
             menuRule.InitialState.AddWordTransition(null, "Yes", " ", SpeechGrammarWordType.SGLexical, "Yes", 2, ref PropValue, 1.0F);
             menuRule.InitialState.AddWordTransition(null, "No", " ", SpeechGrammarWordType.SGLexical, "No", 3, ref PropValue, 1.0F);
-            menuRule.InitialState.AddWordTransition(null, "Lights Off", " ", SpeechGrammarWordType.SGLexical, "Lights Off", 4, ref PropValue, 1.0F);
-            menuRule.InitialState.AddWordTransition(null, "Lights On", " ", SpeechGrammarWordType.SGLexical, "Lights On", 5, ref PropValue, 1.0F);
-            menuRule.InitialState.AddWordTransition(null, "First Light", " ", SpeechGrammarWordType.SGLexical, "First Light", 6, ref PropValue, 1.0F);
-            menuRule.InitialState.AddWordTransition(null, "Second Light", " ", SpeechGrammarWordType.SGLexical, "Second Light", 7, ref PropValue, 1.0F);
-            menuRule.InitialState.AddWordTransition(null, "Third Light", " ", SpeechGrammarWordType.SGLexical, "Third Light", 8, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "All Lights Off", " ", SpeechGrammarWordType.SGLexical, "All Lights Off", 4, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "All Lights On", " ", SpeechGrammarWordType.SGLexical, "All Lights On", 5, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "First Light On", " ", SpeechGrammarWordType.SGLexical, "First Light On", 6, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "Second Light On", " ", SpeechGrammarWordType.SGLexical, "Second Light On", 7, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "Third Light On", " ", SpeechGrammarWordType.SGLexical, "Third Light On", 8, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "First Light Off", " ", SpeechGrammarWordType.SGLexical, "First Light Off", 9, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "Second Light Off", " ", SpeechGrammarWordType.SGLexical, "Second Light Off", 10, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "Third Light Off", " ", SpeechGrammarWordType.SGLexical, "Third Light Off", 11, ref PropValue, 1.0F);
             grammar.Rules.Commit();
             grammar.CmdSetRuleState("MenuCommands", SpeechRuleState.SGDSActive);
         }
