@@ -135,50 +135,20 @@ namespace SpatialController
                 // Create the Options
                 m_options = new ZWOptions();
                 m_options.Create(zWaveConfigPath, @"", @"");
-
-                // Lock the options
                 m_options.Lock();
 
                 // Create the OpenZWave Manager
                 m_manager = new ZWManager();
                 m_manager.Create();
-
-                // Add an event handler for all the Z-Wave notifications
                 m_manager.OnNotification += new ManagedNotificationsHandler(NotificationHandler);
-
-                // Add a driver, this will start up the z-wave network
                 m_manager.AddDriver(zWaveSerialPortName);
 
-                // ZWave network is started, and our control of hardware can begin once all the nodes have reported in
+                // Wait for Z-wave.
                 do
                 {
-                    //Log("Waiting", "The nodes all need to report in");
-                    SleepForThreeSeconds(); // Wait since this process can take around 20seconds within my network
+                    SleepForThreeSeconds();
                 }
                 while (m_nodesReady == false);
-
-
-                //Log("All nodes have reported in");
-                foreach (Node node in m_nodeList)
-                {
-                    SleepForThreeSeconds(); // Not really needed, but allows you to see what is going on           
-                    switch (m_manager.GetNodeType(m_homeId, node.ID).ToString())
-                    {
-                        case "Binary Power Switch":
-                        case "Multilevel Power Switch":
-                        case "Multilevel Switch":
-                            //Log("Turning On " + m_manager.GetNodeType(m_homeId, node.ID).ToString() + " with ID " + node.ID.ToString());
-                            //m_manager.SetNodeOn(m_homeId, node.ID);
-                            break;
-                        default:
-                            //Log("Can't do anything with " + m_manager.GetNodeType(m_homeId, node.ID).ToString());
-                            break;
-                    }
-                }
-                SleepForThreeSeconds();
-                //Log("All switches should now be on");
-                //Log("Press a key to exit");
-                //String commandRead = Console.ReadLine().ToString();
             }
         }
 
@@ -271,138 +241,70 @@ namespace SpatialController
             switch (m_notification.GetType())
             {
                 case ZWNotification.Type.ValueAdded:
-                    {
-                        Node node = GetNode(m_notification.GetHomeId(), m_notification.GetNodeId());
-                        if (node != null)
-                        {
-                            node.AddValue(m_notification.GetValueID());
-                            //Log("Event", "Node ValueAdded, " + m_manager.GetValueLabel(m_notification.GetValueID()));
-
-
-                        }
-                        break;
-                    }
-
+                {
+                    Node node = GetNode(m_notification.GetHomeId(), m_notification.GetNodeId());
+                    if (node != null)
+                        node.AddValue(m_notification.GetValueID());
+                    break;
+                }
                 case ZWNotification.Type.ValueRemoved:
-                    {
-                        Node node = GetNode(m_notification.GetHomeId(), m_notification.GetNodeId());
-                        if (node != null)
-                        {
-                            node.RemoveValue(m_notification.GetValueID());
-                            //Log("Event", "Node ValueRemoved, " + m_manager.GetValueLabel(m_notification.GetValueID()));
-                        }
-                        break;
-                    }
-
+                {
+                    Node node = GetNode(m_notification.GetHomeId(), m_notification.GetNodeId());
+                    if (node != null)
+                        node.RemoveValue(m_notification.GetValueID());
+                    break;
+                }
                 case ZWNotification.Type.ValueChanged:
-                    {
-                        Node node = GetNode(m_notification.GetHomeId(), m_notification.GetNodeId());
-                        if (node != null)
-                        {
-                            node.SetValue(m_notification.GetValueID());
-
-                            //Log("Event", "Node ValueChanged, " + m_manager.GetValueLabel(m_notification.GetValueID()).ToString());
-                        }
-
-                        break;
-                    }
-
-                case ZWNotification.Type.Group:
-                    {
-                        break;
-                    }
-
+                {
+                    Node node = GetNode(m_notification.GetHomeId(), m_notification.GetNodeId());
+                    if (node != null)
+                        node.SetValue(m_notification.GetValueID());
+                    break;
+                }
                 case ZWNotification.Type.NodeAdded:
-                    {
-                        // Add the new node to our list
-                        Node node = new Node();
-                        node.ID = m_notification.GetNodeId();
-                        node.HomeID = m_notification.GetHomeId();
-                        m_nodeList.Add(node);
-                        //Log("Event", "Node added, " + m_notification.GetNodeId().ToString());
-                        break;
-                    }
-
+                {
+                    Node node = new Node();
+                    node.ID = m_notification.GetNodeId();
+                    node.HomeID = m_notification.GetHomeId();
+                    m_nodeList.Add(node);
+                    break;
+                }
                 case ZWNotification.Type.NodeRemoved:
+                {
+                    foreach (Node node in m_nodeList)
                     {
-                        foreach (Node node in m_nodeList)
+                        if (node.ID == m_notification.GetNodeId())
                         {
-                            if (node.ID == m_notification.GetNodeId())
-                            {
-                                //Log("Event", "Node removed, " + m_notification.GetNodeId().ToString());
-                                m_nodeList.Remove(node);
-                                break;
-                            }
+                            m_nodeList.Remove(node);
+                            break;
                         }
-                        break;
                     }
-
+                    break;
+                }
                 case ZWNotification.Type.NodeProtocolInfo:
-                    {
-                        Node node = GetNode(m_notification.GetHomeId(), m_notification.GetNodeId());
-                        if (node != null)
-                        {
-
-                            node.Label = m_manager.GetNodeType(m_homeId, node.ID);
-                            //Log("Event", "Node protocol info, " + node.Label.ToString());
-                        }
-                        break;
-                    }
-
+                {
+                    Node node = GetNode(m_notification.GetHomeId(), m_notification.GetNodeId());
+                    if (node != null)
+                        node.Label = m_manager.GetNodeType(m_homeId, node.ID);
+                    break;
+                }
                 case ZWNotification.Type.NodeNaming:
+                {
+                    Node node = GetNode(m_notification.GetHomeId(), m_notification.GetNodeId());
+                    if (node != null)
                     {
-                        Node node = GetNode(m_notification.GetHomeId(), m_notification.GetNodeId());
-                        if (node != null)
-                        {
-                            node.Manufacturer = m_manager.GetNodeManufacturerName(m_homeId, node.ID);
-                            node.Product = m_manager.GetNodeProductName(m_homeId, node.ID);
-                            node.Location = m_manager.GetNodeLocation(m_homeId, node.ID);
-                            node.Name = m_manager.GetNodeName(m_homeId, node.ID);
-                        }
-                        break;
+                        node.Manufacturer = m_manager.GetNodeManufacturerName(m_homeId, node.ID);
+                        node.Product = m_manager.GetNodeProductName(m_homeId, node.ID);
+                        node.Location = m_manager.GetNodeLocation(m_homeId, node.ID);
+                        node.Name = m_manager.GetNodeName(m_homeId, node.ID);
                     }
-
-                case ZWNotification.Type.NodeEvent:
-                    {
-                        //Log("Event", "Node event");
-                        break;
-                    }
-
-                case ZWNotification.Type.PollingDisabled:
-                    {
-                        //Log("Event", "Polling disabled notification");
-                        break;
-                    }
-
-                case ZWNotification.Type.PollingEnabled:
-                    {
-                        //Log("Event", "Polling disabled notification");
-                        break;
-                    }
-
-                case ZWNotification.Type.DriverReady:
-                    {
-                        m_homeId = m_notification.GetHomeId();
-                        //Log("Event", "Driver ready, with homeId " + m_homeId.ToString());
-                        break;
-                    }
-                case ZWNotification.Type.NodeQueriesComplete:
-                    {
-                        break;
-                    }
-                case ZWNotification.Type.AllNodesQueried:
-                    {
-                        //Log("Event", "All nodes queried");
-                        m_nodesReady = true;
-                        break;
-                    }
-                case ZWNotification.Type.AwakeNodesQueried:
-                    {
-                        //Log("Event", "Awake nodes queried (but some sleeping nodes have not been queried)");
-                        break;
-                    }
+                    break;
+                }
+                default:
+                {
+                    break;
+                }
             }
-
         }
 
         /// <summary>
