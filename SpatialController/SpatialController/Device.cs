@@ -412,5 +412,13 @@ namespace SpatialController
                 inFocus = false;
             }
         }
+
+        public static void dimAllToPercent(int percent)
+        {
+            for (int i = 0; i < m_nodeList.Count; i++)
+            {
+                m_manager.SetNodeLevel(m_homeId, m_nodeList[i].ID, (byte)percent);
+            }
+        }
     }
 }

@@ -36,6 +36,9 @@ namespace SpatialController
         private const int SEC_BETWEEN_CALIBRATIONS = 2;
         private const int SAMPLES_PER_SEC = 4;
 
+        private const double MAX_DIMMING_HAND_OFFSET_Y = 100.0;
+        private const double TOTAL_DIMMING_DISTANCE = 600.0;
+
         private bool calibrated;
         private UserGenerator userGenerator;
         private Device[] devices;
@@ -47,6 +50,10 @@ namespace SpatialController
         private SpeechLib.SpSharedRecoContext objRecoContext = null;
         private SpeechLib.ISpeechRecoGrammar grammar = null;
         private SpeechLib.ISpeechGrammarRule menuRule = null;
+
+        private bool dimmingDown;
+        private bool dimmingUp;
+        private double dimmingStartY;
 
         public Ray3D[] RaysToBeAnimated
         {
@@ -83,6 +90,10 @@ namespace SpatialController
                 default:
                     break;
             }
+
+            dimmingDown = false;
+            dimmingUp = false;
+            dimmingStartY = -1000.0;
 
             VoiceCalibration();
         }
@@ -219,10 +230,14 @@ namespace SpatialController
             SkeletonJointPosition head = new SkeletonJointPosition();
             SkeletonJointPosition leftHand = new SkeletonJointPosition();
             SkeletonJointPosition rightHand = new SkeletonJointPosition();
+            SkeletonJointPosition leftShoulder = new SkeletonJointPosition();
+            SkeletonJointPosition rightShoulder = new SkeletonJointPosition();
 
             head = userGenerator.SkeletonCapability.GetSkeletonJointPosition(id, SkeletonJoint.Head);
             leftHand = userGenerator.SkeletonCapability.GetSkeletonJointPosition(id, SkeletonJoint.LeftHand);
             rightHand = userGenerator.SkeletonCapability.GetSkeletonJointPosition(id, SkeletonJoint.RightHand);
+            leftShoulder = userGenerator.SkeletonCapability.GetSkeletonJointPosition(id, SkeletonJoint.LeftShoulder);
+            rightShoulder = userGenerator.SkeletonCapability.GetSkeletonJointPosition(id, SkeletonJoint.RightShoulder);
 
             OpenNI.Point3D headPoint = head.Position;
             OpenNI.Point3D leftPoint = leftHand.Position;
@@ -241,18 +256,66 @@ namespace SpatialController
 
             Console.Write("Left vector: " + leftPointer);
             Console.Write("Right vector: " + rightPointer);
+            
+            if (VerticallyClose(leftPoint, rightPoint))
+            {
+                // Handle dimming.
+                if (FirstAboveSecond(leftPoint, headPoint) && FirstAboveSecond(rightPoint, headPoint))
+                {
+                    Console.Write("Beginning dim down!");
+                    dimmingDown = true;
+                    dimmingStartY = leftPoint.Y;
+                }
+                else if (dimmingDown)
+                {
+                    int dimPercent = (int)((dimmingStartY - leftPoint.Y) / TOTAL_DIMMING_DISTANCE);
+                    if (dimPercent < 0) dimPercent = 0;
+                    else if (dimPercent > 100) dimPercent = 100;
 
-            foreach (Device d in devices)
+                    Device.dimAllToPercent(dimPercent);
+                }
+                else if (VerticallyClose(leftPoint, leftShoulder.Position)
+                    && VerticallyClose(leftShoulder.Position, rightShoulder.Position)
+                    && VerticallyClose(rightShoulder.Position, rightPoint))
+                {
+                    Console.Write("Beginning dim up!");
+                    dimmingUp = true;
+                    dimmingStartY = leftPoint.Y;
+                }
+                else if (dimmingUp)
+                {
+                    int dimPercent = (int)((leftPoint.Y - dimmingStartY) / TOTAL_DIMMING_DISTANCE);
+                    if (dimPercent < 0) dimPercent = 0;
+                    else if (dimPercent > 100) dimPercent = 100;
+
+                    Device.dimAllToPercent(dimPercent);
+                }
+            }
+            else
+            {
+                // Allow pointing.
+                dimmingDown = false;
+                dimmingUp = false;
+            }
+
+            if (!dimmingUp && !dimmingDown) foreach (Device d in devices)
             {
                 if (leftPointer.closeTo(d.position) || rightPointer.closeTo(d.position))
                 {
                     d.isInFocus();
-                    // The Device class does the actual device manipulation.
-                    // In the future, the calibration step will be able to change what each
-                    // device's action is.
                 }
             }
             Console.Write("=============================");
+        }
+
+        private bool VerticallyClose(OpenNI.Point3D p0, OpenNI.Point3D p1)
+        {
+            return Math.Abs(p0.Y - p1.Y) < MAX_DIMMING_HAND_OFFSET_Y;
+        }
+
+        private bool FirstAboveSecond(OpenNI.Point3D p0, OpenNI.Point3D p1)
+        {
+            return p0.Y - p1.Y > 0;
         }
 
         private void Reco_Event(int StreamNumber, object StreamPosition, SpeechRecognitionType RecognitionType, ISpeechRecoResult Result)
