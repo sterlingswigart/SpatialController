@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Media;
 using System.Text;
 using System.Windows.Media.Media3D;
 using OpenZWaveDotNet;
@@ -427,18 +428,17 @@ namespace SpatialController
         // Focusing code
         // ==================================================
 
+        public Vector3D position;
+
         private const int ACTIVATION_MS = 400;
         private const int DEBOUNCE_MS = 2000;
 
         private bool inFocus;
         private bool on;
-
         private DateTime lastActionTime;
         private DateTime focusStartTime;
-
-        public Vector3D position;
-
         private byte deviceId;
+        private SoundPlayer sound;
 
         public Device(Vector3D position, byte deviceId)
         {
@@ -448,6 +448,14 @@ namespace SpatialController
             this.focusStartTime = DateTime.Now;
             this.position = position;
             this.deviceId = deviceId;
+            try
+            {
+                sound = new SoundPlayer("beep-6.wav");
+            }
+            catch (Exception e)
+            {
+                Console.Write("Exception while playing sound: " + e);
+            }
         }
 
         public void isInFocus()
@@ -469,6 +477,7 @@ namespace SpatialController
                         else
                             m_manager.SetNodeOff(m_homeId, deviceId);
                     }
+                    sound.Play();
                     on = !on;
                     lastActionTime = DateTime.Now;
                 }

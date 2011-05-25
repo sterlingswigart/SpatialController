@@ -1,10 +1,16 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
+using SpeechLib;
+using System.Speech;
+using System.Speech.Synthesis;
+using System.IO;
+using System.Reflection;
+using System.Runtime.InteropServices;
 
 using OpenNI;
 
@@ -25,7 +31,6 @@ namespace SpatialController
         private const int SEC_FOR_RELOCATION = 5;
         private const int SEC_BETWEEN_CALIBRATIONS = 2;
         private const int SAMPLES_PER_SEC = 4;
-        private const double SPHERE_RADIUS = 1.0;
 
         private bool calibrated;
         private UserGenerator userGenerator;
@@ -33,6 +38,11 @@ namespace SpatialController
 
         private object animationLock;
         private Ray3D[] raysToBeAnimated; // Note: Only works for one user.
+
+        private SpeechSynthesizer synth;
+        private SpeechLib.SpSharedRecoContext objRecoContext = null;
+        private SpeechLib.ISpeechRecoGrammar grammar = null;
+        private SpeechLib.ISpeechGrammarRule menuRule = null;
 
         public Ray3D[] RaysToBeAnimated
         {
@@ -52,7 +62,10 @@ namespace SpatialController
                 this.devices[i] = devices[i];
             }
 
-            Console.Write("Starting SpatialController!");
+            synth = new SpeechSynthesizer();
+            synth.SelectVoice("Microsoft Anna");
+
+            SpeakAndWriteToPrompt("Starting SpatialController!");
 
             switch (startupType)
             {
@@ -66,6 +79,8 @@ namespace SpatialController
                 default:
                     break;
             }
+
+            VoiceCalibration();
         }
 
         // Calibrate the locations of devices in the room, saving calibration
@@ -74,9 +89,12 @@ namespace SpatialController
         {
             List<byte> nodes = Device.getNodes();
             Ray3D[] firstRays = new Ray3D[nodes.Count];
-            UserPrompt.Write("Please stand about 10 feet away from the kinect on the right"
+
+            SpeakAndWriteToPrompt("Please stand about 10 feet away from the kinect on the right"
                     + " side of the field of view, but leave room for pointing off to the right.");
-            UserPrompt.Write("When a light turns on, please point to it until it turns off.");
+
+            SpeakAndWriteToPrompt("When a light turns on, please point to it until it turns off.");
+
             Thread.Sleep((SEC_FOR_RELOCATION - SEC_BETWEEN_CALIBRATIONS) * 1000);
 
             for (int i = 0; i < nodes.Count; i++)
@@ -85,9 +103,11 @@ namespace SpatialController
                 firstRays[i] = calibrateDeviceOnePosition(user, nodes[i]);
             }
 
-            UserPrompt.Write("Please stand about 5 feet away from the kinect on the left"
+            SpeakAndWriteToPrompt("Please stand about 5 feet away from the kinect on the left"
                     + " side of the field of view, but leave room for pointing off to the left.");
-            UserPrompt.Write("Once again, when a light turns on, please point to it until it turns off.");
+
+            SpeakAndWriteToPrompt("Once again, when a light turns on, please point to it until it turns off.");
+
             Thread.Sleep((SEC_FOR_RELOCATION - SEC_BETWEEN_CALIBRATIONS) * 1000);
 
             for (int i = 0; i < nodes.Count; i++)
@@ -98,13 +118,21 @@ namespace SpatialController
 
             saveCalibrationToFile(devices);
             calibrated = true;
-            UserPrompt.Write("Calibration has been completed. After a few seconds, you should be able"
+
+            SpeakAndWriteToPrompt("Calibration has been completed. After a few seconds, you should be able"
                     + " to point to lights to turn them on!");
+        }
+
+        private void SpeakAndWriteToPrompt(String s)
+        {
+            UserPrompt.Write(s);
+            synth.Speak(s);
         }
 
         private Ray3D calibrateDeviceOnePosition(int user, byte device)
         {
             UserPrompt.Write("Turning on device " + device);
+
             Device.turnOn(device);
             Thread.Sleep(CALIBRATION_OFFSET_SEC * 1000);
             Vector3D[] headPoints = new Vector3D[STEADY_SEC * SAMPLES_PER_SEC];
@@ -129,6 +157,7 @@ namespace SpatialController
                     rightHandPoints.Average(x => x.Y), rightHandPoints.Average(x => x.Z));
 
             UserPrompt.Write("Turning off device " + device);
+
             Device.turnOff(device);
             return new Ray3D(averageHeadPoint, averageRightHandPoint);
         }
@@ -220,6 +249,46 @@ namespace SpatialController
                 }
             }
             Console.Write("=============================");
+        }
+
+        //The text being recognized
+        private void Reco_Event(int StreamNumber, object StreamPosition, SpeechRecognitionType RecognitionType, ISpeechRecoResult Result)
+        {
+            String textToSay = Result.PhraseInfo.GetText(0, -1, true);
+            synth.Speak("Recognition: " + textToSay);
+        }
+
+        //The result text
+        private void Hypo_Event(int StreamNumber, object StreamPosition, ISpeechRecoResult Result)
+        {
+            String textToSay = Result.PhraseInfo.GetText(0, -1, true);
+            synth.Speak("Hypothesis: " + textToSay);
+        }
+
+        private void VoiceCalibration()
+        {
+            // Get an insance of RecoContext. I am using the shared RecoContext.
+            objRecoContext = new SpeechLib.SpSharedRecoContext();
+            // Assign a eventhandler for the Hypothesis Event.
+            objRecoContext.Hypothesis += new _ISpeechRecoContextEvents_HypothesisEventHandler(Hypo_Event);
+            // Assign a eventhandler for the Recognition Event.
+            objRecoContext.Recognition += new _ISpeechRecoContextEvents_RecognitionEventHandler(Reco_Event);
+            //Creating an instance of the grammer object.
+            grammar = objRecoContext.CreateGrammar(0);
+
+            //Activate the Menu Commands.			
+            menuRule = grammar.Rules.Add("MenuCommands", SpeechRuleAttributes.SRATopLevel | SpeechRuleAttributes.SRADynamic, 1);
+            object PropValue = "";
+            menuRule.InitialState.AddWordTransition(null, "Cancel", " ", SpeechGrammarWordType.SGLexical, "Cancel", 1, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "Yes", " ", SpeechGrammarWordType.SGLexical, "Yes", 2, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "No", " ", SpeechGrammarWordType.SGLexical, "No", 3, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "Lights Off", " ", SpeechGrammarWordType.SGLexical, "Lights Off", 4, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "Lights On", " ", SpeechGrammarWordType.SGLexical, "Lights On", 5, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "First Light", " ", SpeechGrammarWordType.SGLexical, "First Light", 6, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "Second Light", " ", SpeechGrammarWordType.SGLexical, "Second Light", 7, ref PropValue, 1.0F);
+            menuRule.InitialState.AddWordTransition(null, "Third Light", " ", SpeechGrammarWordType.SGLexical, "Third Light", 8, ref PropValue, 1.0F);
+            grammar.Rules.Commit();
+            grammar.CmdSetRuleState("MenuCommands", SpeechRuleState.SGDSActive);
         }
     }
 }
