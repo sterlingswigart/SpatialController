@@ -241,69 +241,77 @@ namespace SpatialController
             switch (m_notification.GetType())
             {
                 case ZWNotification.Type.ValueAdded:
-                {
-                    Node node = GetNode(m_notification.GetHomeId(), m_notification.GetNodeId());
-                    if (node != null)
-                        node.AddValue(m_notification.GetValueID());
-                    break;
-                }
+                    {
+                        Node node = GetNode(m_notification.GetHomeId(), m_notification.GetNodeId());
+                        if (node != null)
+                            node.AddValue(m_notification.GetValueID());
+                        break;
+                    }
                 case ZWNotification.Type.ValueRemoved:
-                {
-                    Node node = GetNode(m_notification.GetHomeId(), m_notification.GetNodeId());
-                    if (node != null)
-                        node.RemoveValue(m_notification.GetValueID());
-                    break;
-                }
+                    {
+                        Node node = GetNode(m_notification.GetHomeId(), m_notification.GetNodeId());
+                        if (node != null)
+                            node.RemoveValue(m_notification.GetValueID());
+                        break;
+                    }
                 case ZWNotification.Type.ValueChanged:
-                {
-                    Node node = GetNode(m_notification.GetHomeId(), m_notification.GetNodeId());
-                    if (node != null)
-                        node.SetValue(m_notification.GetValueID());
-                    break;
-                }
+                    {
+                        Node node = GetNode(m_notification.GetHomeId(), m_notification.GetNodeId());
+                        if (node != null)
+                            node.SetValue(m_notification.GetValueID());
+                        break;
+                    }
                 case ZWNotification.Type.NodeAdded:
-                {
-                    Node node = new Node();
-                    node.ID = m_notification.GetNodeId();
-                    node.HomeID = m_notification.GetHomeId();
-                    m_nodeList.Add(node);
-                    break;
-                }
+                    {
+                        Node node = new Node();
+                        node.ID = m_notification.GetNodeId();
+                        node.HomeID = m_notification.GetHomeId();
+                        m_nodeList.Add(node);
+                        break;
+                    }
                 case ZWNotification.Type.NodeRemoved:
-                {
-                    foreach (Node node in m_nodeList)
                     {
-                        if (node.ID == m_notification.GetNodeId())
+                        foreach (Node node in m_nodeList)
                         {
-                            m_nodeList.Remove(node);
-                            break;
+                            if (node.ID == m_notification.GetNodeId())
+                            {
+                                m_nodeList.Remove(node);
+                                break;
+                            }
                         }
+                        break;
                     }
-                    break;
-                }
                 case ZWNotification.Type.NodeProtocolInfo:
-                {
-                    Node node = GetNode(m_notification.GetHomeId(), m_notification.GetNodeId());
-                    if (node != null)
-                        node.Label = m_manager.GetNodeType(m_homeId, node.ID);
-                    break;
-                }
-                case ZWNotification.Type.NodeNaming:
-                {
-                    Node node = GetNode(m_notification.GetHomeId(), m_notification.GetNodeId());
-                    if (node != null)
                     {
-                        node.Manufacturer = m_manager.GetNodeManufacturerName(m_homeId, node.ID);
-                        node.Product = m_manager.GetNodeProductName(m_homeId, node.ID);
-                        node.Location = m_manager.GetNodeLocation(m_homeId, node.ID);
-                        node.Name = m_manager.GetNodeName(m_homeId, node.ID);
+                        Node node = GetNode(m_notification.GetHomeId(), m_notification.GetNodeId());
+                        if (node != null)
+                            node.Label = m_manager.GetNodeType(m_homeId, node.ID);
+                        break;
                     }
-                    break;
-                }
+                case ZWNotification.Type.NodeNaming:
+                    {
+                        Node node = GetNode(m_notification.GetHomeId(), m_notification.GetNodeId());
+                        if (node != null)
+                        {
+                            node.Manufacturer = m_manager.GetNodeManufacturerName(m_homeId, node.ID);
+                            node.Product = m_manager.GetNodeProductName(m_homeId, node.ID);
+                            node.Location = m_manager.GetNodeLocation(m_homeId, node.ID);
+                            node.Name = m_manager.GetNodeName(m_homeId, node.ID);
+                        }
+                        break;
+                    }
+                case ZWNotification.Type.DriverReady:
+                    {
+                        m_homeId = m_notification.GetHomeId();
+                        break;
+                    }
+                case ZWNotification.Type.AllNodesQueried:
+                    {
+                        m_nodesReady = true;
+                        break;
+                    }
                 default:
-                {
                     break;
-                }
             }
         }
 
