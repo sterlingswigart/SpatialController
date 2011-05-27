@@ -81,8 +81,8 @@ namespace SpatialController
             switch (startupType)
             {
                 case ControllerStartup.FromFile:
-                    initFromFile();
                     this.calibrated = true;
+                    initFromFile();
                     break;
                 case ControllerStartup.Calibrate:
                     // Wait for user to be recognized to start calibration.
@@ -180,21 +180,48 @@ namespace SpatialController
         // Saves device calibration data so that the system remembers the positions.
         private void saveCalibrationToFile(Device[] devices)
         {
-            // TODO
+            TextWriter tw = new StreamWriter(CALIBRATION_DATA_FILE);
 
-            // Template:
-            // FriendlyName[\t]x[\t]y[\t]z
-            // ...
+            for (int i = 0; i < devices.Length; i++)
+            {
+                //each device uses four lines (or more depending on what information
+                //we need to save later)
+                tw.WriteLine(devices[i].deviceId);
+                tw.WriteLine(devices[i].position.X);
+                tw.WriteLine(devices[i].position.Y);
+                tw.WriteLine(devices[i].position.Z);
+            }
+
+            tw.Close();
         }
 
         // Initialize the locations of devices from a file.
         private void initFromFile()
         {
-            // TODO
+            TextReader tr = new StreamReader(CALIBRATION_DATA_FILE);
+            List<byte> nodes = Device.getNodes();
 
-            // Template:
-            // FriendlyName[\t]x[\t]y[\t]z
-            // ...
+            int i = 0;
+            //we need to check that peek returns "null" in case there is no other line to read
+            while ( tr.Peek() > -1 )
+            {
+                byte deviceId = Convert.ToByte(tr.ReadLine());
+                if (!nodes.Contains(deviceId))
+                {
+                    this.calibrated = false;
+                    return;
+                }
+
+                //we need to double check the convert to byte function since this has not been tested
+                devices[i].deviceId = deviceId;
+                devices[i].position.X = Convert.ToDouble(tr.ReadLine());
+                devices[i].position.Y = Convert.ToDouble(tr.ReadLine());
+                devices[i].position.Z = Convert.ToDouble(tr.ReadLine());
+                i++;
+            }
+
+            tr.Close();
+            
         }
 
         // Should be called intermittently to examine skeleton data. Determines
