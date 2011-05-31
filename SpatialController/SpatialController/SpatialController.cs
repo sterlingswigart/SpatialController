@@ -131,7 +131,7 @@ namespace SpatialController
                 devices[i] = new Device(firstRays[i].intersectionWith(calibrateDeviceOnePosition(user, nodes[i])), nodes[i]);
             }
 
-            saveCalibrationToFile(devices);
+            //saveCalibrationToFile(devices);
             calibrated = true;
 
             SpeakAndWriteToPrompt("Calibration has been completed. After a few seconds, you should be able"
@@ -325,13 +325,10 @@ namespace SpatialController
                 dimmingUp = false;
             }
 
-            if (!dimmingUp && !dimmingDown) foreach (Device d in devices)
-            {
-                if (leftPointer.closeTo(d.position) || rightPointer.closeTo(d.position))
-                {
-                    d.isInFocus();
-                }
-            }
+            if (!dimmingUp && !dimmingDown)
+                foreach (Device d in devices)
+                    if (leftPointer.closeTo(d.position) || rightPointer.closeTo(d.position))
+                        d.isInFocus();
             Console.Write("=============================");
         }
 

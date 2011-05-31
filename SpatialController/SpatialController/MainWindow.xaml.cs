@@ -150,13 +150,13 @@ namespace SpatialController
 
         private void NewUser(object sender, NewUserEventArgs e)
         {
-            if (File.Exists(SKELETON_CALIBRATION_FILE) && !trackingUser)
+            /*if (File.Exists(SKELETON_CALIBRATION_FILE) && !trackingUser)
             {
                 userGenerator.SkeletonCapability.LoadCalibrationDataFromFile(e.ID, SKELETON_CALIBRATION_FILE);
-                trackingUser = true;
+               trackingUser = true;
                 trackingUserId = e.ID;
             }
-            else
+            else*/
                 userGenerator.PoseDetectionCapability.StartPoseDetection(userGenerator.SkeletonCapability.CalibrationPose, e.ID);
             Console.Write(e.ID + " Found new user");
         }
@@ -166,29 +166,6 @@ namespace SpatialController
             if (trackingUserId == e.ID)
                 trackingUser = false;
             Console.Write(e.ID + " Lost user");
-        }
-
-        private void CalibrationStart(object sender, CalibrationStartEventArgs e)
-        {
-            Console.Write(e.ID + " Calibration start");
-        }
-
-        private void CalibrationEnd(object sender, CalibrationEndEventArgs e)
-        {
-            Console.Write(e.ID + " Calibration ended " + (e.Success ? "successfully" : "unsuccessfully"));
-            if (e.Success)
-            {
-                if (trackingUser)
-                    userGenerator.SkeletonCapability.StopTracking(trackingUserId);
-                userGenerator.SkeletonCapability.StartTracking(e.ID);
-                trackingUser = true;
-                trackingUserId = e.ID;
-                userGenerator.SkeletonCapability.SaveCalibrationDataToFile(trackingUserId, "skeleton.cal");
-            }
-            else
-            {
-                userGenerator.PoseDetectionCapability.StartPoseDetection(userGenerator.SkeletonCapability.CalibrationPose, e.ID);
-            }
         }
 
         private void PoseDetected(object sender, PoseDetectedEventArgs e)
@@ -201,6 +178,29 @@ namespace SpatialController
         private void PoseEnded(object sender, PoseEndedEventArgs e)
         {
             Console.Write(e.ID + " Lost Pose " + e.Pose);
+        }
+
+        private void CalibrationStart(object sender, CalibrationStartEventArgs e)
+        {
+            Console.Write(e.ID + " Calibration start");
+        }
+
+        private void CalibrationEnd(object sender, CalibrationEndEventArgs e)
+        {
+            Console.Write(e.ID + " Calibration ended " + (e.Success ? "successfully" : "unsuccessfully"));
+            if (e.Success)
+            {
+                /*if (trackingUser)
+                    userGenerator.SkeletonCapability.StopTracking(trackingUserId);*/
+                userGenerator.SkeletonCapability.StartTracking(e.ID);
+                trackingUser = true;
+                trackingUserId = e.ID;
+                //userGenerator.SkeletonCapability.SaveCalibrationDataToFile(trackingUserId, "skeleton.cal");
+            }
+            else
+            {
+                userGenerator.PoseDetectionCapability.StartPoseDetection(userGenerator.SkeletonCapability.CalibrationPose, e.ID);
+            }
         }
 
         private void RecalibrateCommand(object sender, EventArgs e)
