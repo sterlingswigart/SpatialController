@@ -11,7 +11,7 @@ namespace SpatialController
     public class Ray3D
     {
         private const double MAX_CALIBRATION_DISTANCE = 300.0;
-        private const double MAX_COMMAND_DISTANCE = 400.0;
+        private const double MAX_COMMAND_DISTANCE = 500.0;
 
         Vector3D p0;
         Vector3D p1;

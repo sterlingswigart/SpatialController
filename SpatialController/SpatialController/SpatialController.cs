@@ -37,7 +37,7 @@ namespace SpatialController
         private const int SAMPLES_PER_SEC = 4;
 
         private const double MAX_DIMMING_HAND_OFFSET_Y = 100.0;
-        private const double TOTAL_DIMMING_DISTANCE = 600.0;
+        private const double TOTAL_DIMMING_DISTANCE = 400.0;
 
         private bool calibrated;
         private UserGenerator userGenerator;
