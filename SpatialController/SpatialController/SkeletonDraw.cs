@@ -28,7 +28,7 @@ namespace SpatialController
             int nXRes = data.XRes;
             int nYRes = data.YRes;
 
-            foreach (Ray3D ray in rays)
+            /*foreach (Ray3D ray in rays)
             {
                 if (ray != null)
                 {
@@ -36,7 +36,7 @@ namespace SpatialController
                     int[] p1 = ray.point1();
                     DrawTheLine(ref image, p0, p1);
                 }
-            }
+            }*/
 
             int[] users = userGenerator.GetUsers();
             foreach (int user in users)
