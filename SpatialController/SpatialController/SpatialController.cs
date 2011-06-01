@@ -104,17 +104,18 @@ namespace SpatialController
         {
             List<byte> nodes = Device.getNodes();
             Ray3D[] firstRays = new Ray3D[nodes.Count];
+            Device.turnOffAll();
 
             SpeakAndWriteToPrompt("Please stand about 10 feet away from the kinect on the right"
                     + " side of the field of view, but leave room for pointing off to the right.");
 
             SpeakAndWriteToPrompt("When a light turns on, please point to it until it turns off.");
 
-            Thread.Sleep((SEC_FOR_RELOCATION - SEC_BETWEEN_CALIBRATIONS) * 1000);
+            //Thread.Sleep((SEC_FOR_RELOCATION - SEC_BETWEEN_CALIBRATIONS) * 1000);
 
             for (int i = 0; i < nodes.Count; i++)
             {
-                Thread.Sleep(SEC_BETWEEN_CALIBRATIONS * 1000);
+                //Thread.Sleep(SEC_BETWEEN_CALIBRATIONS * 1000);
                 firstRays[i] = calibrateDeviceOnePosition(user, nodes[i]);
             }
 
@@ -123,11 +124,11 @@ namespace SpatialController
 
             SpeakAndWriteToPrompt("Once again, when a light turns on, please point to it until it turns off.");
 
-            Thread.Sleep((SEC_FOR_RELOCATION - SEC_BETWEEN_CALIBRATIONS) * 1000);
+            //Thread.Sleep((SEC_FOR_RELOCATION - SEC_BETWEEN_CALIBRATIONS) * 1000);
 
             for (int i = 0; i < nodes.Count; i++)
             {
-                Thread.Sleep(SEC_BETWEEN_CALIBRATIONS * 1000);
+                //Thread.Sleep(SEC_BETWEEN_CALIBRATIONS * 1000);
                 devices[i] = new Device(firstRays[i].intersectionWith(calibrateDeviceOnePosition(user, nodes[i])), nodes[i]);
             }
 
@@ -213,10 +214,8 @@ namespace SpatialController
                 }
 
                 //we need to double check the convert to byte function since this has not been tested
-                devices[i].deviceId = deviceId;
-                devices[i].position.X = Convert.ToDouble(tr.ReadLine());
-                devices[i].position.Y = Convert.ToDouble(tr.ReadLine());
-                devices[i].position.Z = Convert.ToDouble(tr.ReadLine());
+                devices[i] = new Device(new Vector3D(Convert.ToDouble(tr.ReadLine()), Convert.ToDouble(tr.ReadLine()),
+                        Convert.ToDouble(tr.ReadLine())), deviceId);
                 i++;
             }
 

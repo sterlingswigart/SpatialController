@@ -153,6 +153,7 @@ namespace SpatialController
             if (File.Exists(SKELETON_CALIBRATION_FILE) && !trackingUser)
             {
                 userGenerator.SkeletonCapability.LoadCalibrationDataFromFile(e.ID, SKELETON_CALIBRATION_FILE);
+                userGenerator.SkeletonCapability.StartTracking(e.ID);
                 trackingUser = true;
                 trackingUserId = e.ID;
             }

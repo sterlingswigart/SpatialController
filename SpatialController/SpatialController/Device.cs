@@ -118,9 +118,9 @@ namespace SpatialController
         // ==================================================
 
         // Configuration details
-        static private string logFilePath = @"C:\Users\Sterling\Desktop\My Dropbox\Classes\HomeNetworking\open-zwave-read-only\simplelog.txt";
-        static private string zWaveConfigPath = @"C:\Users\Sterling\Desktop\My Dropbox\Classes\HomeNetworking\open-zwave-read-only\config\";
-        static private string zWaveSerialPortName = @"\\.\COM25";
+        static private string logFilePath = @"C:\Users\sterling\Downloads\open-zwave-read-only\open-zwave-read-only\simplelog.txt";
+        static private string zWaveConfigPath = @"C:\Users\sterling\Downloads\open-zwave-read-only\open-zwave-read-only\config\";
+        static private string zWaveSerialPortName = @"\\.\COM3";
 
         static private ZWOptions m_options = null;
         static private ZWManager m_manager = null;
