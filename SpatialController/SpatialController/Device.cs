@@ -327,12 +327,8 @@ namespace SpatialController
         static private Node GetNode(UInt32 homeId, Byte nodeId)
         {
             foreach (Node node in m_nodeList)
-            {
                 if ((node.ID == nodeId) && (node.HomeID == homeId))
-                {
                     return node;
-                }
-            }
 
             return null;
         }
@@ -340,12 +336,8 @@ namespace SpatialController
         static private ZWValueID GetValueID(Node node, string valueLabel)
         {
             foreach (ZWValueID valueID in node.Values)
-            {
                 if (m_manager.GetValueLabel(valueID) == valueLabel)
-                {
                     return valueID;
-                }
-            }
             return null;
         }
 

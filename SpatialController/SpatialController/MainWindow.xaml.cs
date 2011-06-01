@@ -169,6 +169,18 @@ namespace SpatialController
             Console.Write(e.ID + " Lost user");
         }
 
+        private void PoseDetected(object sender, PoseDetectedEventArgs e)
+        {
+            Console.Write(e.ID + " Detected pose " + e.Pose);
+            userGenerator.PoseDetectionCapability.StopPoseDetection(e.ID);
+            userGenerator.SkeletonCapability.RequestCalibration(e.ID, true);
+        }
+
+        private void PoseEnded(object sender, PoseEndedEventArgs e)
+        {
+            Console.Write(e.ID + " Lost Pose " + e.Pose);
+        }
+
         private void CalibrationStart(object sender, CalibrationStartEventArgs e)
         {
             Console.Write(e.ID + " Calibration start");
@@ -190,18 +202,6 @@ namespace SpatialController
             {
                 userGenerator.PoseDetectionCapability.StartPoseDetection(userGenerator.SkeletonCapability.CalibrationPose, e.ID);
             }
-        }
-
-        private void PoseDetected(object sender, PoseDetectedEventArgs e)
-        {
-            Console.Write(e.ID + " Detected pose " + e.Pose);
-            userGenerator.PoseDetectionCapability.StopPoseDetection(e.ID);
-            userGenerator.SkeletonCapability.RequestCalibration(e.ID, true);
-        }
-
-        private void PoseEnded(object sender, PoseEndedEventArgs e)
-        {
-            Console.Write(e.ID + " Lost Pose " + e.Pose);
         }
 
         private void RecalibrateCommand(object sender, EventArgs e)

@@ -203,7 +203,6 @@ namespace SpatialController
             List<byte> nodes = Device.getNodes();
 
             int i = 0;
-            //we need to check that peek returns "null" in case there is no other line to read
             while ( tr.Peek() > -1 )
             {
                 byte deviceId = Convert.ToByte(tr.ReadLine());
@@ -213,7 +212,6 @@ namespace SpatialController
                     return;
                 }
 
-                //we need to double check the convert to byte function since this has not been tested
                 devices[i] = new Device(new Vector3D(Convert.ToDouble(tr.ReadLine()), Convert.ToDouble(tr.ReadLine()),
                         Convert.ToDouble(tr.ReadLine())), deviceId);
                 i++;
