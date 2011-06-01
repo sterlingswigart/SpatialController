@@ -425,7 +425,10 @@ namespace SpatialController
         {
             for (int i = 0; i < m_nodeList.Count; i++)
             {
-                m_manager.SetNodeLevel(m_homeId, m_nodeList[i].ID, (byte)percent);
+                uint j = m_homeId;
+                string nodeType = m_manager.GetNodeProductType(m_homeId, m_nodeList[i].ID);
+                if (nodeType == "Multilevel Power Switch" && nodeType == "Multilevel Switch")
+                    m_manager.SetNodeLevel(m_homeId, m_nodeList[i].ID, (byte)percent);
             }
         }
     }
