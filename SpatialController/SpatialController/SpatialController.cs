@@ -36,7 +36,7 @@ namespace SpatialController
         private const int SEC_BETWEEN_CALIBRATIONS = 2;
         private const int SAMPLES_PER_SEC = 4;
 
-        private const double MAX_DIMMING_HAND_OFFSET_Y = 100.0;
+        private const double MAX_DIMMING_HAND_OFFSET_Y = 150.0;
         private const double TOTAL_DIMMING_DISTANCE = 400.0;
 
         private bool calibrated;
@@ -324,13 +324,10 @@ namespace SpatialController
                 dimmingUp = false;
             }
 
-            if (!dimmingUp && !dimmingDown) foreach (Device d in devices)
-            {
-                if (leftPointer.closeTo(d.position) || rightPointer.closeTo(d.position))
-                {
-                    d.isInFocus();
-                }
-            }
+            if (!dimmingUp && !dimmingDown)
+                foreach (Device d in devices)
+                    if (leftPointer.closeTo(d.position) || rightPointer.closeTo(d.position))
+                        d.isInFocus();
             Console.Write("=============================");
         }
 

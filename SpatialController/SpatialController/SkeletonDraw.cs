@@ -28,6 +28,7 @@ namespace SpatialController
             int nXRes = data.XRes;
             int nYRes = data.YRes;
 
+            // TODO: Fix these.
             /*foreach (Ray3D ray in rays)
             {
                 if (ray != null)
